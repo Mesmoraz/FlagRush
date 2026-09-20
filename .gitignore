@@ -112,3 +112,11 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# Transient files Unity creates during headless builds (Netcode / Burst / performance-test runner)
+/Assets/netcode-build-assets-temp/
+/Assets/netcode-build-assets-temp.meta
+/Assets/Resources/PerformanceTestRunInfo.json*
+/Assets/Resources/PerformanceTestRunSettings.json*
+/Data/
+/Assets/Resources.meta
