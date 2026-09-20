@@ -13,6 +13,12 @@ namespace FlagRush.Spike
     [UpdateInGroup(typeof(PresentationSystemGroup))]
     public partial class InstancedRenderSystem : SystemBase
     {
+        // RenderMeshInstanced requires a field named objectToWorld; LocalToWorld is the same 64 bytes, so reinterpret.
+        struct InstanceData
+        {
+            public Matrix4x4 objectToWorld;
+        }
+
         Mesh _mesh;
         Material _swarmMaterial;
         Material _ghostMaterial;
@@ -38,16 +44,17 @@ namespace FlagRush.Spike
 
         protected override void OnUpdate()
         {
-            Draw(_swarmQuery, _swarmMaterial);
-            Draw(_ghostQuery, _ghostMaterial);
+            SpikeStats.DrawnInstances = Draw(_swarmQuery, _swarmMaterial) + Draw(_ghostQuery, _ghostMaterial);
         }
 
-        void Draw(EntityQuery query, Material material)
+        int Draw(EntityQuery query, Material material)
         {
             var matrices = query.ToComponentDataArray<LocalToWorld>(Allocator.Temp);
-            if (matrices.Length > 0)
-                Graphics.RenderMeshInstanced(new RenderParams(material), _mesh, 0, matrices);
+            int count = matrices.Length;
+            if (count > 0)
+                Graphics.RenderMeshInstanced(new RenderParams(material), _mesh, 0, matrices.Reinterpret<InstanceData>());
             matrices.Dispose();
+            return count;
         }
     }
 }

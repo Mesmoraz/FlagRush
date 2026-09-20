@@ -17,7 +17,7 @@ namespace FlagRush.Spike
         protected override void OnCreate()
         {
             var em = EntityManager;
-            var prefab = em.CreateEntity(typeof(SpikeGhostState), typeof(LocalTransform));
+            var prefab = em.CreateEntity(typeof(SpikeGhostState), typeof(LocalTransform), typeof(LocalToWorld));
             em.SetComponentData(prefab, LocalTransform.Identity);
             em.SetName(prefab, "SpikeGhostPrefab");
 

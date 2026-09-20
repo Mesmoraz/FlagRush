@@ -31,7 +31,7 @@ namespace FlagRush.Spike
             var random = new Random(12345);
             for (int i = 0; i < AgentCount; i++)
             {
-                var e = state.EntityManager.CreateEntity(typeof(SwarmAgent), typeof(LocalTransform));
+                var e = state.EntityManager.CreateEntity(typeof(SwarmAgent), typeof(LocalTransform), typeof(LocalToWorld));
                 state.EntityManager.SetComponentData(e, new SwarmAgent
                 {
                     Phase = random.NextFloat(0f, math.PI * 2f),

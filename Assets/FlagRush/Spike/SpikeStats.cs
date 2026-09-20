@@ -12,6 +12,7 @@ namespace FlagRush.Spike
         public static int JobWorkerCount;
         public static int SwarmCount;
         public static uint SwarmFrames;
+        public static int DrawnInstances;      // instances submitted to Graphics.RenderMeshInstanced last frame
 
         // (b) Netcode: IPC client<->server worlds in one process
         public static bool ServerWorldExists;

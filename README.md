@@ -11,8 +11,8 @@ inventory, crafting/production loops, vehicles — all built as *simple* systems
 | Iteration | What | State |
 |---|---|---|
 | 1 | Engine-free domain contracts (`Assets/FlagRush/Domain`) + tests | done |
-| 2 | Web de-risk spike: Entities + Burst + Netcode for Entities in a WebGPU build | next |
-| 3 | CTF rule set, bots, prediction/interpolation, relevancy, persistence | planned |
+| 2 | Web de-risk spike: Entities + Burst + Netcode for Entities in a WebGPU build — all gates pass ([results](docs/m1-web-spike.md)) | done |
+| 3 | CTF rule set, bots, prediction/interpolation, relevancy, persistence | next |
 | 4 | Dedicated server (UDP + WebSocket) + browser/native clients in one match | planned |
 | 5 | itch.io publish | planned |
 

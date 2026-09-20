@@ -28,7 +28,7 @@ namespace FlagRush.Spike
             GUILayout.Label($"FlagRush M1 spike  |  {Application.platform}  |  {SystemInfo.graphicsDeviceType}  |  {SystemInfo.processorCount} cores");
             GUILayout.Space(6);
             GUILayout.Label($"[{(burstOk ? "PASS" : "FAIL")}] (a) Burst: job body compiled by Burst = {Yes(!SpikeStats.SwarmJobRanManaged)}  (BurstCompiler.IsEnabled={BurstCompiler.IsEnabled})");
-            GUILayout.Label($"[{(threadsOk ? "PASS" : "FAIL")}] (a) Threads: job ran on {SpikeStats.SwarmJobThreadsSeen} distinct threads, JobWorkerCount={SpikeStats.JobWorkerCount}, swarm={SpikeStats.SwarmCount} frames={SpikeStats.SwarmFrames}");
+            GUILayout.Label($"[{(threadsOk ? "PASS" : "FAIL")}] (a) Threads: job ran on {SpikeStats.SwarmJobThreadsSeen} distinct threads, JobWorkerCount={SpikeStats.JobWorkerCount}, swarm={SpikeStats.SwarmCount} frames={SpikeStats.SwarmFrames} drawn={SpikeStats.DrawnInstances}");
             GUILayout.Label($"[{(netOk ? "PASS" : "FAIL")}] (b) Netcode over IPC: worlds server={Yes(SpikeStats.ServerWorldExists)} client={Yes(SpikeStats.ClientWorldExists)}  connected={Yes(SpikeStats.ClientConnected)} inGame={Yes(SpikeStats.ClientInGame)}");
             GUILayout.Label($"      server: tick={SpikeStats.ServerTick} connections={SpikeStats.ServerConnections} ghosts={SpikeStats.GhostsOnServer}");
             GUILayout.Label($"      client: serverTick={SpikeStats.ClientServerTick} ghosts={SpikeStats.GhostsOnClient} newestReplicatedTick={SpikeStats.NewestReplicatedTick} rtt={SpikeStats.EstimatedRttMs:F1}ms");
