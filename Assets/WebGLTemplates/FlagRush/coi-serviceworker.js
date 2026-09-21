@@ -10,7 +10,7 @@ if (typeof window === "undefined") {
     const r = e.request;
     if (r.cache === "only-if-cached" && r.mode !== "same-origin") return;
     e.respondWith(fetch(r).then((res) => {
-      if (res.status === 0) return res;
+      if (res.status === 0 || res.status === 304 || res.type === "opaque") return res; // cannot rebuild these
       const h = new Headers(res.headers);
       h.set("Cross-Origin-Embedder-Policy", "require-corp");
       h.set("Cross-Origin-Opener-Policy", "same-origin");

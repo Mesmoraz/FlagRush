@@ -77,6 +77,9 @@
         productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
         productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
         showBanner: showBanner,
+        // Redeploys reuse the same file names; the loader's IndexedDB cache served a stale, empty body
+        // once ("can't access property subarray"). The browser's HTTP cache is enough for us.
+        cacheControl: () => "no-store",
       }, (p) => { document.getElementById("fill").style.width = (p * 100) + "%"; })
       .then(() => { document.getElementById("loading").remove(); })
       .catch((m) => { showBanner(m, "error"); });
