@@ -1,8 +1,8 @@
 {
-    "name": "FlagRush.Spike.Editor",
-    "rootNamespace": "FlagRush.Spike.Editor",
+    "name": "FlagRush.Demo.Editor",
+    "rootNamespace": "FlagRush.Demo.Editor",
     "references": [
-        "FlagRush.Spike",
+        "FlagRush.Demo",
         "Unity.Entities",
         "Unity.Entities.Hybrid",
         "Unity.Scenes",

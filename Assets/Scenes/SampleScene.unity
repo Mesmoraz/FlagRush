@@ -394,7 +394,7 @@ GameObject:
   - component: {fileID: 486047947}
   - component: {fileID: 486047946}
   m_Layer: 0
-  m_Name: SpikeSubScene
+  m_Name: DemoSubScene
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

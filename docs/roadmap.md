@@ -40,7 +40,7 @@ up. This is the "oversimplifier" pitch: few knobs, obvious consequences.
 | Packet loss | 0 – 30 % | same stage | packet loss %, ghosts still smooth (interpolation) vs stutter |
 | Interpolation delay | 0 – 200 ms | `ClientTickRate.InterpolationTimeMS` | snapshot age (grows), smoothness under loss (improves) |
 | Ghost send rate | 1 – 60 /s | `GhostPrefabCreation.Config.MaxSendRate` per prefab (rebuild prefab) | bandwidth vs visible choppiness |
-| Pause server | toggle | stop `SpikeServerSystem` updates | client keeps interpolating, then freezes; age climbs |
+| Pause server | toggle | stop `ProbeServerSystem` updates | client keeps interpolating, then freezes; age climbs |
 | Kill connection | button | `NetworkStreamRequestDisconnect` | reconnect system heals it; ghosts respawn from snapshots |
 | Presets | LAN / Wi-Fi / 4G / bad hotel | one click sets latency+jitter+loss | everything |
 
@@ -152,5 +152,5 @@ system is shown working under lag.
 | 5 Online | 4 | 3–5 days + hosting | TLS/WebSocket on the host; server build on Web-less machine |
 | 6 Systems | 4 | 2–3 days each | none new |
 
-Levels 2 and 3 are the next two iterations; both are pure additions to `Assets/FlagRush/Spike`
+Levels 2 and 3 are the next two iterations; both are pure additions to `Assets/FlagRush/Demo`
 (which gets renamed to `Assets/FlagRush/Demo` when Level 2 lands — it stops being a spike).

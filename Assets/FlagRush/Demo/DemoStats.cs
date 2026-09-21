@@ -1,10 +1,10 @@
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>
     /// The live readout. Systems write here; the HUD, the PlayMode test and the docs read it.
     /// Deliberately a static bag: this is a spike, not a system to keep.
     /// </summary>
-    public static class SpikeStats
+    public static class DemoStats
     {
         // ---- compute: can heavy simulation run in a browser?
         public static bool SwarmJobRanManaged;   // true = the job body executed WITHOUT Burst this frame
@@ -26,7 +26,7 @@ namespace FlagRush.Spike
         public static int GhostsOnServer;
         public static int GhostsOnClient;
         public static int GhostTarget;
-        public static uint NewestReplicatedTick;  // max SpikeGhostState.ServerTick received on the client
+        public static uint NewestReplicatedTick;  // max ProbeGhost.ServerTick received on the client
         public static float EstimatedRttMs;
         public static float SnapshotBytesPerSecond;
         public static float SnapshotsPerSecond;

@@ -1,13 +1,13 @@
 using System;
 using UnityEngine;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>
     /// Knobs for the demo, so a viewer can push the numbers: <c>?agents=5000&amp;ghosts=200</c> on the web,
     /// <c>--agents=5000 --ghosts=200</c> for a native player. Parsed once, clamped to sane ranges.
     /// </summary>
-    public static class SpikeConfig
+    public static class DemoConfig
     {
         public const int DefaultAgents = 150;
         public const int DefaultGhosts = 8;

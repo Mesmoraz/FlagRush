@@ -2,7 +2,7 @@
 # Usage: .\Tools\deploy-pages.ps1   (run after a release web build)
 $root = Split-Path $PSScriptRoot -Parent
 $build = Join-Path $root 'Builds\Web'
-if (-not (Test-Path (Join-Path $build 'index.html'))) { throw "No web build at $build - run SpikeBuilder.BuildWebGl2 first." }
+if (-not (Test-Path (Join-Path $build 'index.html'))) { throw "No web build at $build - run DemoBuilder.BuildWebGl2 first." }
 
 function Run($cmd) {
     # git writes progress/warnings to stderr; only the exit code means failure.

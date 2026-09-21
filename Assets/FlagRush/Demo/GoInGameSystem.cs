@@ -3,7 +3,7 @@ using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>Marks every new connection as in-game on both sides so ghost snapshots start flowing.</summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]

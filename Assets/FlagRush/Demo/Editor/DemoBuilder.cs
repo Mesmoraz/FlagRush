@@ -4,10 +4,10 @@ using UnityEditor.Build;
 using UnityEngine;
 using UnityEngine.Rendering;
 
-namespace FlagRush.Spike.Editor
+namespace FlagRush.Demo.Editor
 {
     /// <summary>Headless player builds. Web is the target that matters; Windows is the fast sanity check.</summary>
-    public static class SpikeBuilder
+    public static class DemoBuilder
     {
         static readonly string[] Scenes = { "Assets/Scenes/SampleScene.unity" };
 
@@ -78,7 +78,7 @@ namespace FlagRush.Spike.Editor
                 options = options,
             });
             var s = report.summary;
-            Debug.Log($"[SpikeBuilder] {target} -> {s.result} in {s.totalTime.TotalSeconds:F0}s, {s.totalSize / (1024 * 1024)} MB, errors={s.totalErrors} warnings={s.totalWarnings} at {Path.GetFullPath(location)}");
+            Debug.Log($"[DemoBuilder] {target} -> {s.result} in {s.totalTime.TotalSeconds:F0}s, {s.totalSize / (1024 * 1024)} MB, errors={s.totalErrors} warnings={s.totalWarnings} at {Path.GetFullPath(location)}");
             if (Application.isBatchMode) EditorApplication.Exit(s.result == UnityEditor.Build.Reporting.BuildResult.Succeeded ? 0 : 1);
         }
     }

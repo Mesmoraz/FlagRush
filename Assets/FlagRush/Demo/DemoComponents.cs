@@ -2,7 +2,7 @@ using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>Client-local entity moved by a Burst job. Exists to prove jobs run on worker threads.</summary>
     public struct SwarmAgent : IComponentData
@@ -14,7 +14,7 @@ namespace FlagRush.Spike
 
     /// <summary>Server-owned replicated state. Exists to prove snapshots cross the IPC transport.</summary>
     [GhostComponent]
-    public struct SpikeGhostState : IComponentData
+    public struct ProbeGhost : IComponentData
     {
         [GhostField] public uint ServerTick;
         [GhostField(Quantization = 100)] public float3 Position;
@@ -22,7 +22,7 @@ namespace FlagRush.Spike
     }
 
     /// <summary>Per-world singleton pointing at the runtime-created ghost prefab.</summary>
-    public struct SpikeGhostPrefab : IComponentData
+    public struct ProbeGhostPrefab : IComponentData
     {
         public Entity Value;
     }

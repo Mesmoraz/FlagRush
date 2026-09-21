@@ -2,7 +2,7 @@ using Unity.Entities;
 using Unity.NetCode;
 using UnityEngine;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>
     /// Client + server worlds in one process, talking over the in-process IPC transport only.
@@ -10,7 +10,7 @@ namespace FlagRush.Spike
     /// driver is never registered; IPC is enough for the "simulator" build.
     /// </summary>
     [UnityEngine.Scripting.Preserve]
-    public class SpikeBootstrap : ClientServerBootstrap
+    public class DemoBootstrap : ClientServerBootstrap
     {
         public const ushort Port = 7979;
 
@@ -20,9 +20,9 @@ namespace FlagRush.Spike
             if (RequestedPlayType == PlayType.ClientAndServer)
                 NetworkStreamReceiveSystem.DriverConstructor = new IpcOnlyDriverConstructor();
             var ok = base.Initialize(defaultWorldName);
-            SpikeStats.ServerWorldExists = ServerWorld != null;
-            SpikeStats.ClientWorldExists = ClientWorld != null;
-            Debug.Log($"[Spike] bootstrap playType={RequestedPlayType} server={SpikeStats.ServerWorldExists} client={SpikeStats.ClientWorldExists}");
+            DemoStats.ServerWorldExists = ServerWorld != null;
+            DemoStats.ClientWorldExists = ClientWorld != null;
+            Debug.Log($"[Demo] bootstrap playType={RequestedPlayType} server={DemoStats.ServerWorldExists} client={DemoStats.ClientWorldExists}");
             return ok;
         }
     }

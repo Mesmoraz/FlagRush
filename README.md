@@ -54,7 +54,7 @@ Values above were measured in Chromium on a 20-core Windows machine; see
 ```
 Assets/FlagRush/Domain          plain C# contracts: ids, aspects, relationships, simulation step, ports
 Assets/FlagRush/Domain.Tests    in-memory fakes + NUnit tests (EditMode)
-Assets/FlagRush/Spike           the web prototype: bootstrap, systems, HUD, PlayMode gate test, build scripts
+Assets/FlagRush/Demo           the web prototype: bootstrap, systems, HUD, PlayMode gate test, build scripts
 Assets/WebGLTemplates/FlagRush  the web page (responsive canvas + COOP/COEP service worker for threads)
 Assets/Editor/ProjectBootstrap  headless package install / save helpers
 Tools/serve.py                  local web server with the COOP/COEP headers
@@ -70,7 +70,7 @@ docs/roadmap.md                 the level-by-level plan from simulator to usable
 ```powershell
 unity test  C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --mode EditMode   # domain contracts
 unity test  C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --mode PlayMode   # the prototype gate
-unity build C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --target WebGL --execute-method FlagRush.Spike.Editor.SpikeBuilder.BuildWebGl2   # BuildWeb = WebGPU (release stalls on 6.6.2)
+unity build C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --target WebGL --execute-method FlagRush.Demo.Editor.DemoBuilder.BuildWebGl2   # BuildWeb = WebGPU (release stalls on 6.6.2)
 python Tools\serve.py Builds\Web 8080                                                    # http://localhost:8080
 .\Tools\deploy-pages.ps1                                                                 # publish Builds/Web
 ```

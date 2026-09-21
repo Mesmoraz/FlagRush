@@ -3,7 +3,7 @@ using Unity.NetCode;
 using Unity.Transforms;
 using UnityEngine;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>
     /// Builds the ghost prefab in code, identically in the client and server worlds, so the spike needs
@@ -12,27 +12,27 @@ namespace FlagRush.Spike
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
     [CreateAfter(typeof(DefaultVariantSystemGroup))]
-    public partial class SpikeGhostPrefabSystem : SystemBase
+    public partial class ProbeGhostPrefabSystem : SystemBase
     {
         protected override void OnCreate()
         {
             var em = EntityManager;
-            var prefab = em.CreateEntity(typeof(SpikeGhostState), typeof(LocalTransform), typeof(LocalToWorld));
+            var prefab = em.CreateEntity(typeof(ProbeGhost), typeof(LocalTransform), typeof(LocalToWorld));
             em.SetComponentData(prefab, LocalTransform.Identity);
-            em.SetName(prefab, "SpikeGhostPrefab");
+            em.SetName(prefab, "ProbeGhostPrefab");
 
             GhostPrefabCreation.ConvertToGhostPrefab(em, prefab, new GhostPrefabCreation.Config
             {
-                Name = "SpikeGhost",
+                Name = "ProbeGhost",
                 Importance = 1000,
                 SupportedGhostModes = GhostModeMask.Interpolated,
                 DefaultGhostMode = GhostMode.Interpolated,
                 OptimizationMode = GhostOptimizationMode.Dynamic,
             });
 
-            var holder = em.CreateEntity(typeof(SpikeGhostPrefab));
-            em.SetComponentData(holder, new SpikeGhostPrefab { Value = prefab });
-            Debug.Log($"[Spike] ghost prefab created in {World.Name}");
+            var holder = em.CreateEntity(typeof(ProbeGhostPrefab));
+            em.SetComponentData(holder, new ProbeGhostPrefab { Value = prefab });
+            Debug.Log($"[Demo] ghost prefab created in {World.Name}");
             Enabled = false;
         }
 

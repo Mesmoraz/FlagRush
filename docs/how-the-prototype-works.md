@@ -74,7 +74,7 @@ just the columns that changed.
 | `SwarmAgent` | blue cubes | `Phase`, `Radius`, `Speed` | the recipe for this cube's circular path |
 | `LocalTransform` | every cube | `Position`, `Rotation`, `Scale` | where it is (Unity's standard transform component) |
 | `LocalToWorld` | every cube | a 4×4 matrix | the same position packed the way the GPU wants it. Unity's transform system fills this in from `LocalTransform` each frame |
-| `SpikeGhostState` | orange cubes | `ServerTick`, `Position`, `Index` | the **replicated** data. Fields marked `[GhostField]` are the ones the server sends to clients |
+| `ProbeGhost` | orange cubes | `ServerTick`, `Position`, `Index` | the **replicated** data. Fields marked `[GhostField]` are the ones the server sends to clients |
 | `SubSceneMarker` | 3 invisible entities | `Value` | proof that the level file ("SubScene") loaded — nothing more |
 | `NetworkId`, `NetworkStreamInGame` | the *connection* entity | id, flag | Netcode's own bookkeeping: "this connection exists" and "this connection wants game data" |
 
@@ -89,10 +89,10 @@ Systems are tagged with the world(s) they belong to. Same code, different rooms.
 | System | Runs in | What it does every frame |
 |---|---|---|
 | `GoInGameSystem` | client **and** server | finds any new connection and stamps it `NetworkStreamInGame` — "yes, send me game state". Without this, nothing replicates |
-| `SpikeGhostPrefabSystem` | client **and** server, once at startup | builds the *template* for an orange cube in code and registers it with Netcode. Both worlds must build the identical template or the client cannot decode what the server sends |
-| `SpikeServerSystem` | server only | once a connection is in-game, creates 8 orange cubes from the template; then every tick moves them around a ring and writes the tick number into each one |
+| `ProbeGhostPrefabSystem` | client **and** server, once at startup | builds the *template* for an orange cube in code and registers it with Netcode. Both worlds must build the identical template or the client cannot decode what the server sends |
+| `ProbeServerSystem` | server only | once a connection is in-game, creates 8 orange cubes from the template; then every tick moves them around a ring and writes the tick number into each one |
 | `SwarmSystem` + `SwarmMoveJob` | client only | schedules a **Burst-compiled job** that moves all 150 blue cubes in parallel across worker threads, and records which threads actually did the work |
-| `SpikeClientStatsSystem` | client only | reads the connection state, current tick, ghost count and round-trip time; also copies each orange cube's replicated `Position` into its `LocalTransform` so it can be drawn |
+| `ClientStatsSystem` | client only | reads the connection state, current tick, ghost count and round-trip time; also copies each orange cube's replicated `Position` into its `LocalTransform` so it can be drawn |
 | `SubSceneProbeSystem` | client **and** server | counts `SubSceneMarker` entities (expects 3) |
 | `InstancedRenderSystem` | client only (presentation) | collects every cube's `LocalToWorld` matrix and draws them all in two GPU calls (one blue, one orange) |
 
@@ -105,8 +105,8 @@ Here is what happens ~60 times a second, in order.
 **In ServerWorld**
 1. Netcode receives anything the client sent (nothing yet — there are no inputs in this prototype).
 2. `GoInGameSystem` stamps new connections.
-3. `SpikeServerSystem` advances the 8 orange cubes one step around the ring and stamps the current
-   server tick into `SpikeGhostState.ServerTick`.
+3. `ProbeServerSystem` advances the 8 orange cubes one step around the ring and stamps the current
+   server tick into `ProbeGhost.ServerTick`.
 4. Netcode's **snapshot** system looks at every ghost, compares it with what it last sent, and writes
    the *changes* into a compact packet. Position is "quantised" (rounded to 1/100th of a unit) so it
    takes fewer bits. The packet goes into the IPC mail slot.
@@ -117,13 +117,13 @@ Here is what happens ~60 times a second, in order.
 2. `SwarmSystem` schedules `SwarmMoveJob`. Burst has compiled that job to native WebAssembly; the job
    system splits the 150 cubes into chunks and hands them to worker threads. When it finishes, the
    system counts how many distinct threads touched the data (the panel showed 6).
-3. `SpikeClientStatsSystem` copies replicated positions into transforms and refreshes the numbers on
+3. `ClientStatsSystem` copies replicated positions into transforms and refreshes the numbers on
    the panel.
 4. Unity's transform system converts every `LocalTransform` into a `LocalToWorld` matrix.
 5. `InstancedRenderSystem` hands those matrices to the GPU: one draw call for all blue cubes, one for
    all orange.
 
-**Then** the HUD `MonoBehaviour` draws the panel from the shared `SpikeStats` numbers.
+**Then** the HUD `MonoBehaviour` draws the panel from the shared `DemoStats` numbers.
 
 The panel line `client: serverTick=320 ... newestReplicatedTick=315` is this loop made visible: the
 server is at tick 320, and the newest orange-cube data the client has decoded was written at tick 315.
@@ -182,7 +182,7 @@ simpler than the official path and works everywhere, so it will stay.
 - The **Domain** layer (`Assets/FlagRush/Domain`) defines *what the game's data means*: ids, aspects
   like `ICarryable`/`ICarrier`, relationships as `(Kind, Subject, Object)` rows, and a pure
   `Step(tick, inputs) → events` simulation. It has no Unity in it and is fully unit-tested.
-- This **Spike** proves *where that data can live*: as ECS components, replicated by Netcode, computed
+- This **Demo** proves *where that data can live*: as ECS components, replicated by Netcode, computed
   by Burst jobs, drawn by the instanced renderer — in a browser.
 - The next iteration marries the two: a `Flag` becomes an entity with `ICarryable`-shaped components,
   "avatar 7 carries flag 12" becomes a `Carries` relationship row that is replicated as a ghost field,
@@ -211,21 +211,21 @@ simpler than the official path and works everywhere, so it will stay.
 ## 9. Where things live
 
 ```
-Assets/FlagRush/Spike/
-  SpikeBootstrap.cs          creates the two worlds; forces IPC-only networking
-  SpikeComponents.cs         the components in the table above
+Assets/FlagRush/Demo/
+  DemoBootstrap.cs          creates the two worlds; forces IPC-only networking
+  DemoComponents.cs          the components in the table above
   GoInGameSystem.cs          "send me game data" stamp
-  SpikeGhostPrefabSystem.cs  builds the orange-cube template in both worlds
-  SpikeServerSystem.cs       server: spawns + moves the 8 ghosts each tick
+  ProbeGhostPrefabSystem.cs  builds the orange-cube template in both worlds
+  ProbeServerSystem.cs       server: spawns + moves the 8 ghosts each tick
   SwarmSystem.cs             client: the Burst job that moves the 150 blue cubes
-  SpikeClientStatsSystem.cs  client: connection/tick/ghost/RTT readout
+  ClientStatsSystem.cs  client: connection/tick/ghost/RTT readout
   SubSceneProbeSystem.cs     counts baked entities
   InstancedRenderSystem.cs   draws everything (no Entities Graphics)
-  SpikeHud.cs                the grey panel
-  SpikeStats.cs              the shared numbers the panel reads
-  SpikeConfig.cs             ?agents= / ?ghosts= knobs
+  DemoHud.cs                the grey panel
+  DemoStats.cs              the shared numbers the panel reads
+  DemoConfig.cs             ?agents= / ?ghosts= knobs
   NetStatsSystem.cs          measures bytes and packets actually crossing the transport
-  Tests/SpikeGateTests.cs    the same PASS/FAIL checks as an automated test
+  Tests/DemoGateTests.cs    the same PASS/FAIL checks as an automated test
   Editor/                    headless scene setup + Web/Windows build scripts
 Tools/serve.py               local web server with the COOP/COEP headers
 docs/m1-web-spike.md         measured results and the gotchas we hit

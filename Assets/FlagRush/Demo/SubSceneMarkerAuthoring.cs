@@ -1,7 +1,7 @@
 using Unity.Entities;
 using UnityEngine;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>Authoring for the SubScene test: bakes one SubSceneMarker per GameObject.</summary>
     public class SubSceneMarkerAuthoring : MonoBehaviour

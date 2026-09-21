@@ -7,7 +7,7 @@ using Unity.Jobs.LowLevel.Unsafe;
 using Unity.Mathematics;
 using Unity.Transforms;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>
     /// 150 client-local entities moved by a Burst-compiled parallel job. The job records which thread
@@ -18,7 +18,7 @@ namespace FlagRush.Spike
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct SwarmSystem : ISystem
     {
-        public static int AgentCount => SpikeConfig.Agents;
+        public static int AgentCount => DemoConfig.Agents;
 
         NativeArray<int> _threadHits;   // 1 per thread index that executed a chunk
         NativeArray<int> _managedFlag;  // [0] set to 1 only when the body runs without Burst
@@ -42,8 +42,8 @@ namespace FlagRush.Spike
                 });
                 state.EntityManager.SetComponentData(e, LocalTransform.FromScale(0.5f));
             }
-            SpikeStats.SwarmCount = AgentCount;
-            SpikeStats.JobWorkerCount = JobsUtility.JobWorkerCount;
+            DemoStats.SwarmCount = AgentCount;
+            DemoStats.JobWorkerCount = JobsUtility.JobWorkerCount;
         }
 
         public void OnDestroy(ref SystemState state)
@@ -65,13 +65,13 @@ namespace FlagRush.Spike
             }.ScheduleParallel(state.Dependency);
             state.Dependency.Complete();
             float ms = (Stopwatch.GetTimestamp() - _jobStart) * 1000f / Stopwatch.Frequency;
-            SpikeStats.SwarmJobMs = SpikeStats.SwarmFrames < 10 ? ms : SpikeStats.SwarmJobMs * 0.95f + ms * 0.05f;
+            DemoStats.SwarmJobMs = DemoStats.SwarmFrames < 10 ? ms : DemoStats.SwarmJobMs * 0.95f + ms * 0.05f;
 
             int seen = 0;
             for (int i = 0; i < _threadHits.Length; i++) if (_threadHits[i] != 0) seen++;
-            SpikeStats.SwarmJobThreadsSeen = seen;
-            SpikeStats.SwarmJobRanManaged = _managedFlag[0] != 0;
-            SpikeStats.SwarmFrames++;
+            DemoStats.SwarmJobThreadsSeen = seen;
+            DemoStats.SwarmJobRanManaged = _managedFlag[0] != 0;
+            DemoStats.SwarmFrames++;
         }
     }
 

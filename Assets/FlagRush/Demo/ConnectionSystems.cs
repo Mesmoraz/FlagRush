@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.NetCode;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>
     /// Server side: a browser tab can stall for seconds while it warms up (shader compiles, a hidden tab),
@@ -9,7 +9,7 @@ namespace FlagRush.Spike
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(InitializationSystemGroup))]
-    public partial struct SpikeServerTickRateSystem : ISystem
+    public partial struct ServerTickRateSystem : ISystem
     {
         public void OnCreate(ref SystemState state)
         {
@@ -27,7 +27,7 @@ namespace FlagRush.Spike
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
-    public partial struct SpikeReconnectSystem : ISystem
+    public partial struct ReconnectSystem : ISystem
     {
         double _nextAttempt;
 
@@ -43,7 +43,7 @@ namespace FlagRush.Spike
             _nextAttempt = now + 3.0;
             if (!ClientServerBootstrap.HasDefaultAddressAndPortSet(out var endpoint)) return;
             SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Connect(state.EntityManager, endpoint);
-            SpikeStats.LastError = $"reconnecting at t={now:F0}s";
+            DemoStats.LastError = $"reconnecting at t={now:F0}s";
         }
     }
 }

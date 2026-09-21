@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.NetCode;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>
     /// Measures what actually crosses the transport. Runs after NetworkStreamReceiveSystem has filled the
@@ -29,15 +29,15 @@ namespace FlagRush.Spike
                     _bytesThisWindow += buffer.Length;
                     _snapshotsThisWindow++;
                 }
-                SpikeStats.PacketLossPercent = ack.ValueRO.SnapshotPacketLoss.NetworkPacketLossPercent * 100.0;
+                DemoStats.PacketLossPercent = ack.ValueRO.SnapshotPacketLoss.NetworkPacketLossPercent * 100.0;
             }
 
             double elapsed = now - _windowStart;
             if (elapsed >= 1.0)
             {
-                SpikeStats.SnapshotBytesPerSecond = (float)(_bytesThisWindow / elapsed);
-                SpikeStats.SnapshotsPerSecond = (float)(_snapshotsThisWindow / elapsed);
-                SpikeStats.AvgSnapshotBytes = _snapshotsThisWindow > 0 ? (float)_bytesThisWindow / _snapshotsThisWindow : 0f;
+                DemoStats.SnapshotBytesPerSecond = (float)(_bytesThisWindow / elapsed);
+                DemoStats.SnapshotsPerSecond = (float)(_snapshotsThisWindow / elapsed);
+                DemoStats.AvgSnapshotBytes = _snapshotsThisWindow > 0 ? (float)_bytesThisWindow / _snapshotsThisWindow : 0f;
                 _bytesThisWindow = 0;
                 _snapshotsThisWindow = 0;
                 _windowStart = now;

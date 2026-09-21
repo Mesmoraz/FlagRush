@@ -1,7 +1,7 @@
 using Unity.Entities;
 using Unity.NetCode;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>Counts entities baked from the SubScene in each world. Zero on the client after load = SubScene failed on this platform.</summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation | WorldSystemFilterFlags.ServerSimulation)]
@@ -12,8 +12,8 @@ namespace FlagRush.Spike
         {
             int count = 0;
             foreach (var _ in SystemAPI.Query<RefRO<SubSceneMarker>>()) count++;
-            if (state.World.IsServer()) SpikeStats.SubSceneEntitiesServer = count;
-            else SpikeStats.SubSceneEntitiesClient = count;
+            if (state.World.IsServer()) DemoStats.SubSceneEntitiesServer = count;
+            else DemoStats.SubSceneEntitiesClient = count;
         }
     }
 }

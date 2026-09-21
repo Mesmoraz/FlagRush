@@ -17,7 +17,7 @@ Claude desktop browser (Chromium), Windows, 20-core machine, development build s
 
 - **Stay on Netcode for Entities** (no fallback to Netcode for GameObjects needed).
 - Browser "simulator" mode = `ClientServerBootstrap` with an **IPC-only driver constructor**
-  (`SpikeBootstrap`/`IpcOnlyDriverConstructor`): the server world never tries to open a socket.
+  (`DemoBootstrap`/`IpcOnlyDriverConstructor`): the server world never tries to open a socket.
 - Runtime ghost prefabs (`GhostPrefabCreation.ConvertToGhostPrefab`) work; the creating system must be
   `[CreateAfter(typeof(DefaultVariantSystemGroup))]`.
 - SubScenes are fine on Web, so the arena can be authored/baked normally.
@@ -46,6 +46,6 @@ Claude desktop browser (Chromium), Windows, 20-core machine, development build s
 
 ```powershell
 unity test C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --mode PlayMode
-unity build C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --target WebGL --execute-method FlagRush.Spike.Editor.SpikeBuilder.BuildWeb
+unity build C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --target WebGL --execute-method FlagRush.Demo.Editor.DemoBuilder.BuildWeb
 python Tools\serve.py Builds\Web 8080   # then open http://localhost:8080 with the tab visible
 ```

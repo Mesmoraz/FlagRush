@@ -1,6 +1,6 @@
 {
-    "name": "FlagRush.Spike",
-    "rootNamespace": "FlagRush.Spike",
+    "name": "FlagRush.Demo",
+    "rootNamespace": "FlagRush.Demo",
     "references": [
         "Unity.Entities",
         "Unity.Entities.Hybrid",

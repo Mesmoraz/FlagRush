@@ -1,8 +1,8 @@
 {
-    "name": "FlagRush.Spike.Tests",
-    "rootNamespace": "FlagRush.Spike.Tests",
+    "name": "FlagRush.Demo.Tests",
+    "rootNamespace": "FlagRush.Demo.Tests",
     "references": [
-        "FlagRush.Spike",
+        "FlagRush.Demo",
         "UnityEngine.TestRunner",
         "UnityEditor.TestRunner"
     ],

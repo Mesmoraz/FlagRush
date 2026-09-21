@@ -3,7 +3,7 @@ using Unity.Entities;
 using Unity.Transforms;
 using UnityEngine;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>
     /// The Web-safe render path: Entities Graphics does not support Web, so entity transforms are pushed
@@ -30,10 +30,10 @@ namespace FlagRush.Spike
         protected override void OnCreate()
         {
             _mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
-            var baseMaterial = Resources.Load<Material>("SpikeMaterial");
+            var baseMaterial = Resources.Load<Material>("DemoMaterial");
             if (baseMaterial == null)
             {
-                SpikeStats.LastError = "SpikeMaterial not found in Resources; using fallback shader";
+                DemoStats.LastError = "DemoMaterial not found in Resources; using fallback shader";
                 baseMaterial = new Material(Shader.Find("Universal Render Pipeline/Unlit"));
             }
             _swarmMaterial = new Material(baseMaterial) { color = new Color(0.25f, 0.6f, 1f) };
@@ -41,13 +41,13 @@ namespace FlagRush.Spike
             _swarmMaterial.enableInstancing = _ghostMaterial.enableInstancing = true;
 
             _swarmQuery = GetEntityQuery(ComponentType.ReadOnly<SwarmAgent>(), ComponentType.ReadOnly<LocalToWorld>());
-            _ghostQuery = GetEntityQuery(ComponentType.ReadOnly<SpikeGhostState>(), ComponentType.ReadOnly<LocalToWorld>());
+            _ghostQuery = GetEntityQuery(ComponentType.ReadOnly<ProbeGhost>(), ComponentType.ReadOnly<LocalToWorld>());
         }
 
         protected override void OnUpdate()
         {
-            SpikeStats.DrawCalls = 0;
-            SpikeStats.DrawnInstances = Draw(_swarmQuery, _swarmMaterial) + Draw(_ghostQuery, _ghostMaterial);
+            DemoStats.DrawCalls = 0;
+            DemoStats.DrawnInstances = Draw(_swarmQuery, _swarmMaterial) + Draw(_ghostQuery, _ghostMaterial);
         }
 
         int Draw(EntityQuery query, Material material)
@@ -59,7 +59,7 @@ namespace FlagRush.Spike
             for (int start = 0; start < count; start += MaxPerCall)
             {
                 Graphics.RenderMeshInstanced(rp, _mesh, 0, instances, Mathf.Min(MaxPerCall, count - start), start);
-                SpikeStats.DrawCalls++;
+                DemoStats.DrawCalls++;
             }
             matrices.Dispose();
             return count;

@@ -4,20 +4,20 @@ using UnityEditor.SceneManagement;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 
-namespace FlagRush.Spike.Editor
+namespace FlagRush.Demo.Editor
 {
     /// <summary>
     /// One-shot, idempotent authoring for the spike: a SubScene with three baked markers, the instanced
     /// material, a camera that can see the swarm, and Build Settings pointing at the main scene.
-    /// Run headless: unity run <proj> -- -executeMethod FlagRush.Spike.Editor.SpikeSceneSetup.Create
+    /// Run headless: unity run <proj> -- -executeMethod FlagRush.Demo.Editor.DemoSceneSetup.Create
     /// </summary>
-    public static class SpikeSceneSetup
+    public static class DemoSceneSetup
     {
         const string MainScenePath = "Assets/Scenes/SampleScene.unity";
-        const string SubScenePath = "Assets/FlagRush/Spike/SpikeSubScene.unity";
-        const string MaterialPath = "Assets/FlagRush/Spike/Resources/SpikeMaterial.mat";
+        const string SubScenePath = "Assets/FlagRush/Demo/DemoSubScene.unity";
+        const string MaterialPath = "Assets/FlagRush/Demo/Resources/DemoMaterial.mat";
 
-        [MenuItem("FlagRush/Spike/Create scene setup")]
+        [MenuItem("FlagRush/Demo/Create scene setup")]
         public static void Create()
         {
             // Batch mode starts on an unsaved untitled scene; additive scene creation refuses that, so open the real one first.
@@ -27,7 +27,7 @@ namespace FlagRush.Spike.Editor
             WireMainScene(main);
             EditorBuildSettings.scenes = new[] { new EditorBuildSettingsScene(MainScenePath, true) };
             AssetDatabase.SaveAssets();
-            Debug.Log("[SpikeSceneSetup] done");
+            Debug.Log("[DemoSceneSetup] done");
             if (Application.isBatchMode) EditorApplication.Exit(0);
         }
 
@@ -55,10 +55,10 @@ namespace FlagRush.Spike.Editor
 
         static void WireMainScene(Scene main)
         {
-            var host = GameObject.Find("SpikeSubScene");
+            var host = GameObject.Find("DemoSubScene");
             if (host == null)
             {
-                host = new GameObject("SpikeSubScene");
+                host = new GameObject("DemoSubScene");
                 var subScene = host.AddComponent<SubScene>();
                 subScene.SceneAsset = AssetDatabase.LoadAssetAtPath<SceneAsset>(SubScenePath);
                 subScene.AutoLoadScene = true;

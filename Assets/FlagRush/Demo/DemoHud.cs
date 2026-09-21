@@ -1,12 +1,12 @@
 using UnityEngine;
 
-namespace FlagRush.Spike
+namespace FlagRush.Demo
 {
     /// <summary>
     /// On-screen readout. Every row is "measurement -> what it means", so the numbers explain themselves.
     /// Self-instantiating; the scene needs no setup for it.
     /// </summary>
-    public class SpikeHud : MonoBehaviour
+    public class DemoHud : MonoBehaviour
     {
         const float RefHeight = 900f;
         static readonly Color Pass = new Color(0.45f, 0.9f, 0.5f);
@@ -20,8 +20,8 @@ namespace FlagRush.Spike
         [RuntimeInitializeOnLoadMethod(RuntimeInitializeLoadType.AfterSceneLoad)]
         static void Spawn()
         {
-            var go = new GameObject("SpikeHud");
-            go.AddComponent<SpikeHud>();
+            var go = new GameObject("DemoHud");
+            go.AddComponent<DemoHud>();
             DontDestroyOnLoad(go);
         }
 
@@ -32,12 +32,12 @@ namespace FlagRush.Spike
             if (Time.realtimeSinceStartup >= _nextTrace)
             {
                 _nextTrace = Time.realtimeSinceStartup + 5f;
-                Debug.Log($"[Spike] t={Time.realtimeSinceStartup:F1}s serverTick={SpikeStats.ServerTick} clientServerTick={SpikeStats.ClientServerTick} swarmFrames={SpikeStats.SwarmFrames} connected={SpikeStats.ClientConnected} inGame={SpikeStats.ClientInGame} ghosts={SpikeStats.GhostsOnClient}/{SpikeStats.GhostsOnServer} rtt={SpikeStats.EstimatedRttMs:F0} frameMs={SpikeStats.FrameMs:F1} {SpikeStats.LastError}");
+                Debug.Log($"[Demo] t={Time.realtimeSinceStartup:F1}s serverTick={DemoStats.ServerTick} clientServerTick={DemoStats.ClientServerTick} swarmFrames={DemoStats.SwarmFrames} connected={DemoStats.ClientConnected} inGame={DemoStats.ClientInGame} ghosts={DemoStats.GhostsOnClient}/{DemoStats.GhostsOnServer} rtt={DemoStats.EstimatedRttMs:F0} frameMs={DemoStats.FrameMs:F1} {DemoStats.LastError}");
             }
             float ms = Time.unscaledDeltaTime * 1000f;
             if (ms > 250f) return; // a stall (tab hidden, first frame) is not a frame time
             _frameMs = _frameMs == 0 ? ms : _frameMs * 0.95f + ms * 0.05f;
-            SpikeStats.FrameMs = _frameMs;
+            DemoStats.FrameMs = _frameMs;
         }
 
         void EnsureStyles()
@@ -79,50 +79,50 @@ namespace FlagRush.Spike
             GUI.matrix = Matrix4x4.Scale(new Vector3(scale, scale, 1f));
             GUI.backgroundColor = new Color(0.08f, 0.08f, 0.1f, 0.88f);
 
-            bool burstOk = SpikeStats.SwarmFrames > 0 && !SpikeStats.SwarmJobRanManaged;
-            bool threadsOk = SpikeStats.SwarmJobThreadsSeen > 1;
-            bool connOk = SpikeStats.ClientInGame;
-            bool ghostsOk = SpikeStats.GhostTarget > 0 && SpikeStats.GhostsOnClient == SpikeStats.GhostTarget && SpikeStats.NewestReplicatedTick > 0;
-            bool subOk = SpikeStats.SubSceneEntitiesClient == 3;
+            bool burstOk = DemoStats.SwarmFrames > 0 && !DemoStats.SwarmJobRanManaged;
+            bool threadsOk = DemoStats.SwarmJobThreadsSeen > 1;
+            bool connOk = DemoStats.ClientInGame;
+            bool ghostsOk = DemoStats.GhostTarget > 0 && DemoStats.GhostsOnClient == DemoStats.GhostTarget && DemoStats.NewestReplicatedTick > 0;
+            bool subOk = DemoStats.SubSceneEntitiesClient == 3;
 
-            int agents = SpikeStats.SwarmCount;
-            float usPerAgent = agents > 0 ? SpikeStats.SwarmJobMs * 1000f / agents : 0f;
-            float fps = SpikeStats.FrameMs > 0 ? 1000f / SpikeStats.FrameMs : 0f;
-            int ticksBehind = (int)(SpikeStats.ServerTick - SpikeStats.NewestReplicatedTick);
-            int simRate = SpikeStats.SimulationTickRate > 0 ? SpikeStats.SimulationTickRate : 60;
-            float bytesPerGhostTick = SpikeStats.GhostsOnClient > 0 && SpikeStats.SnapshotsPerSecond > 0
-                ? SpikeStats.SnapshotBytesPerSecond / (SpikeStats.SnapshotsPerSecond * SpikeStats.GhostsOnClient) : 0f;
-            float est150 = bytesPerGhostTick * 150f * SpikeStats.SnapshotsPerSecond / 1024f;
+            int agents = DemoStats.SwarmCount;
+            float usPerAgent = agents > 0 ? DemoStats.SwarmJobMs * 1000f / agents : 0f;
+            float fps = DemoStats.FrameMs > 0 ? 1000f / DemoStats.FrameMs : 0f;
+            int ticksBehind = (int)(DemoStats.ServerTick - DemoStats.NewestReplicatedTick);
+            int simRate = DemoStats.SimulationTickRate > 0 ? DemoStats.SimulationTickRate : 60;
+            float bytesPerGhostTick = DemoStats.GhostsOnClient > 0 && DemoStats.SnapshotsPerSecond > 0
+                ? DemoStats.SnapshotBytesPerSecond / (DemoStats.SnapshotsPerSecond * DemoStats.GhostsOnClient) : 0f;
+            float est150 = bytesPerGhostTick * 150f * DemoStats.SnapshotsPerSecond / 1024f;
 
             GUILayout.BeginArea(new Rect(12, 12, 1070, 640), _box);
-            GUILayout.Label($"FlagRush  <color=#{Hex(Dim)}>networking simulator spike</color>", _title);
-            GUILayout.Label($"<color=#{Hex(Dim)}>{Application.platform} · {SystemInfo.graphicsDeviceType} · {SystemInfo.processorCount} cores · {(Debug.isDebugBuild ? "development" : "release")} build · up {Time.realtimeSinceStartup:F0}s · server tick {SpikeStats.ServerTick}</color>", _label);
+            GUILayout.Label($"FlagRush  <color=#{Hex(Dim)}>networking simulator</color>", _title);
+            GUILayout.Label($"<color=#{Hex(Dim)}>{Application.platform} · {SystemInfo.graphicsDeviceType} · {SystemInfo.processorCount} cores · {(Debug.isDebugBuild ? "development" : "release")} build · up {Time.realtimeSinceStartup:F0}s · server tick {DemoStats.ServerTick}</color>", _label);
             GUILayout.Label($"<color=#{Hex(Dim)}>Two ECS worlds run in this tab: a <b>server</b> (owns the truth) and a <b>client</b> (shows it), joined by an in-process transport that carries the same packets a real socket would.</color>", _meaning, GUILayout.Width(1040));
 
             Section("COMPUTE", "can heavy simulation run in a browser?");
             Row(burstOk, "Burst-compiled job", burstOk ? "YES" : "NO (managed fallback ran)", $"the {agents} blue agents are moved by native WebAssembly, not interpreted C#");
-            Row(threadsOk, "Worker threads used", $"{SpikeStats.SwarmJobThreadsSeen} ({SpikeStats.JobWorkerCount} workers + main)", "the work is split across CPU cores; the main thread is not the bottleneck");
-            Row(null, "Job time", $"{SpikeStats.SwarmJobMs:F2} ms / {agents} agents", $"≈ {usPerAgent:F2} µs per agent; 10,000 agents ≈ {usPerAgent * 10f:F1} ms (linear estimate)");
-            Row(null, "Frame time", $"{SpikeStats.FrameMs:F1} ms ({fps:F0} fps)", "both worlds, the job and rendering all fit inside one frame");
+            Row(threadsOk, "Worker threads used", $"{DemoStats.SwarmJobThreadsSeen} ({DemoStats.JobWorkerCount} workers + main)", "the work is split across CPU cores; the main thread is not the bottleneck");
+            Row(null, "Job time", $"{DemoStats.SwarmJobMs:F2} ms / {agents} agents", $"≈ {usPerAgent:F2} µs per agent; 10,000 agents ≈ {usPerAgent * 10f:F1} ms (linear estimate)");
+            Row(null, "Frame time", $"{DemoStats.FrameMs:F1} ms ({fps:F0} fps)", "both worlds, the job and rendering all fit inside one frame");
 
             Section("NETWORK", "does server → client replication work here?");
-            Row(connOk, "Connection", connOk ? "in-game over IPC" : SpikeStats.ClientConnected ? "connected, handshaking" : "not connected", "the client finished the handshake and asked the server for game state");
-            Row(ghostsOk, "Replicated objects", $"{SpikeStats.GhostsOnClient} / {SpikeStats.GhostTarget}", "every server-owned orange object exists on the client, fed by snapshots");
-            Row(null, "Server → client bandwidth", $"{SpikeStats.SnapshotBytesPerSecond / 1024f:F2} KB/s · {SpikeStats.SnapshotsPerSecond:F0} snapshots/s · {SpikeStats.AvgSnapshotBytes:F0} B each", $"≈ {bytesPerGhostTick:F1} B per object per tick; 150 such objects ≈ {est150:F1} KB/s (estimate)");
+            Row(connOk, "Connection", connOk ? "in-game over IPC" : DemoStats.ClientConnected ? "connected, handshaking" : "not connected", "the client finished the handshake and asked the server for game state");
+            Row(ghostsOk, "Replicated objects", $"{DemoStats.GhostsOnClient} / {DemoStats.GhostTarget}", "every server-owned orange object exists on the client, fed by snapshots");
+            Row(null, "Server → client bandwidth", $"{DemoStats.SnapshotBytesPerSecond / 1024f:F2} KB/s · {DemoStats.SnapshotsPerSecond:F0} snapshots/s · {DemoStats.AvgSnapshotBytes:F0} B each", $"≈ {bytesPerGhostTick:F1} B per object per tick; 150 such objects ≈ {est150:F1} KB/s (estimate)");
             Row(null, "Snapshot age", $"{ticksBehind} ticks ({ticksBehind * 1000f / simRate:F0} ms)", "the client shows the server's world this far in the past: transit + interpolation buffer");
-            Row(null, "Round trip", $"{SpikeStats.EstimatedRttMs:F1} ms", "client → server → client; on the internet this is your ping");
-            Row(null, "Packet loss", $"{SpikeStats.PacketLossPercent:F1}%", "snapshots that never arrived (IPC never drops; real networks do)");
-            Row(null, "Tick rate", $"{SpikeStats.SimulationTickRate} sim / {SpikeStats.NetworkTickRate} net per second", "the server simulates and sends this often; ticks are the unit all timing is measured in");
+            Row(null, "Round trip", $"{DemoStats.EstimatedRttMs:F1} ms", "client → server → client; on the internet this is your ping");
+            Row(null, "Packet loss", $"{DemoStats.PacketLossPercent:F1}%", "snapshots that never arrived (IPC never drops; real networks do)");
+            Row(null, "Tick rate", $"{DemoStats.SimulationTickRate} sim / {DemoStats.NetworkTickRate} net per second", "the server simulates and sends this often; ticks are the unit all timing is measured in");
 
             Section("LEVEL", "can baked level data load on the web?");
-            Row(subOk, "SubScene entities", $"{SpikeStats.SubSceneEntitiesClient} / 3 client · {SpikeStats.SubSceneEntitiesServer} / 3 server", "the arena can be authored as a normal Unity scene, baked to entities and streamed in");
+            Row(subOk, "SubScene entities", $"{DemoStats.SubSceneEntitiesClient} / 3 client · {DemoStats.SubSceneEntitiesServer} / 3 server", "the arena can be authored as a normal Unity scene, baked to entities and streamed in");
 
             Section("RENDERING", "without Unity's ECS renderer (no Web support)");
-            Row(null, "Draw calls", $"{SpikeStats.DrawCalls} for {SpikeStats.DrawnInstances} objects", "instanced rendering straight from entity transforms; count barely grows with object count");
+            Row(null, "Draw calls", $"{DemoStats.DrawCalls} for {DemoStats.DrawnInstances} objects", "instanced rendering straight from entity transforms; count barely grows with object count");
 
             GUILayout.Space(8);
             GUILayout.Label($"<color=#{Hex(Dim)}>Push it: add <b>?agents=5000&amp;ghosts=200</b> to the URL.  Source: github.com/Mesmoraz/FlagRush</color>", _meaning, GUILayout.Width(1040));
-            if (!string.IsNullOrEmpty(SpikeStats.LastError)) GUILayout.Label($"<color=#{Hex(Fail)}>note: {SpikeStats.LastError}</color>", _meaning);
+            if (!string.IsNullOrEmpty(DemoStats.LastError)) GUILayout.Label($"<color=#{Hex(Fail)}>note: {DemoStats.LastError}</color>", _meaning);
             GUILayout.EndArea();
         }
     }
