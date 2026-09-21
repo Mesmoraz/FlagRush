@@ -25,8 +25,15 @@ namespace FlagRush.Spike
             DontDestroyOnLoad(go);
         }
 
+        float _nextTrace;
+
         void Update()
         {
+            if (Time.realtimeSinceStartup >= _nextTrace)
+            {
+                _nextTrace = Time.realtimeSinceStartup + 5f;
+                Debug.Log($"[Spike] t={Time.realtimeSinceStartup:F1}s serverTick={SpikeStats.ServerTick} clientServerTick={SpikeStats.ClientServerTick} swarmFrames={SpikeStats.SwarmFrames} connected={SpikeStats.ClientConnected} inGame={SpikeStats.ClientInGame} ghosts={SpikeStats.GhostsOnClient}/{SpikeStats.GhostsOnServer} rtt={SpikeStats.EstimatedRttMs:F0} frameMs={SpikeStats.FrameMs:F1} {SpikeStats.LastError}");
+            }
             float ms = Time.unscaledDeltaTime * 1000f;
             if (ms > 250f) return; // a stall (tab hidden, first frame) is not a frame time
             _frameMs = _frameMs == 0 ? ms : _frameMs * 0.95f + ms * 0.05f;
@@ -89,7 +96,7 @@ namespace FlagRush.Spike
 
             GUILayout.BeginArea(new Rect(12, 12, 1070, 640), _box);
             GUILayout.Label($"FlagRush  <color=#{Hex(Dim)}>networking simulator spike</color>", _title);
-            GUILayout.Label($"<color=#{Hex(Dim)}>{Application.platform} · {SystemInfo.graphicsDeviceType} · {SystemInfo.processorCount} cores · {(Debug.isDebugBuild ? "development" : "release")} build</color>", _label);
+            GUILayout.Label($"<color=#{Hex(Dim)}>{Application.platform} · {SystemInfo.graphicsDeviceType} · {SystemInfo.processorCount} cores · {(Debug.isDebugBuild ? "development" : "release")} build · up {Time.realtimeSinceStartup:F0}s · server tick {SpikeStats.ServerTick}</color>", _label);
             GUILayout.Label($"<color=#{Hex(Dim)}>Two ECS worlds run in this tab: a <b>server</b> (owns the truth) and a <b>client</b> (shows it), joined by an in-process transport that carries the same packets a real socket would.</color>", _meaning, GUILayout.Width(1040));
 
             Section("COMPUTE", "can heavy simulation run in a browser?");
