@@ -17,13 +17,14 @@ namespace FlagRush.Spike
     [UpdateAfter(typeof(GoInGameSystem))]
     public partial struct SpikeServerSystem : ISystem
     {
-        public const int GhostCount = 8;
+        public static int GhostCount => SpikeConfig.Ghosts;
         bool _spawned;
 
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<SpikeGhostPrefab>();
             state.RequireForUpdate<NetworkTime>();
+            SpikeStats.GhostTarget = GhostCount;
         }
 
         public void OnUpdate(ref SystemState state)
@@ -34,6 +35,10 @@ namespace FlagRush.Spike
             int connections = 0;
             foreach (var _ in SystemAPI.Query<RefRO<NetworkStreamInGame>>()) connections++;
             SpikeStats.ServerConnections = connections;
+            if (!SystemAPI.TryGetSingleton<ClientServerTickRate>(out var rate)) rate = default; // no singleton = netcode defaults
+            rate.ResolveDefaults();
+            SpikeStats.SimulationTickRate = rate.SimulationTickRate;
+            SpikeStats.NetworkTickRate = rate.NetworkTickRate;
 
             if (!_spawned && connections > 0)
             {
@@ -52,8 +57,12 @@ namespace FlagRush.Spike
             float t = SpikeStats.ServerTick / 60f;
             foreach (var (ghost, transform) in SystemAPI.Query<RefRW<SpikeGhostState>, RefRW<LocalTransform>>())
             {
-                float a = t + ghost.ValueRO.Index * (math.PI * 2f / GhostCount);
-                var pos = new float3(math.cos(a) * 6f, 1.5f, math.sin(a) * 6f);
+                // 8 per ring, rings 2 units apart, alternating spin direction, so any count reads as a pattern.
+                int ring = ghost.ValueRO.Index / 8;
+                float radius = 6f + ring * 2f;
+                float dir = (ring & 1) == 0 ? 1f : -1f;
+                float a = dir * t + (ghost.ValueRO.Index % 8) * (math.PI * 2f / 8f) + ring * 0.2f;
+                var pos = new float3(math.cos(a) * radius, 1.5f + ring * 0.25f, math.sin(a) * radius);
                 ghost.ValueRW.ServerTick = SpikeStats.ServerTick;
                 ghost.ValueRW.Position = pos;
                 transform.ValueRW.Position = pos;

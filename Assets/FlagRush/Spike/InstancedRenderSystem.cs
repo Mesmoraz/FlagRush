@@ -14,6 +14,8 @@ namespace FlagRush.Spike
     public partial class InstancedRenderSystem : SystemBase
     {
         // RenderMeshInstanced requires a field named objectToWorld; LocalToWorld is the same 64 bytes, so reinterpret.
+        const int MaxPerCall = 1023; // RenderMeshInstanced's per-call limit
+
         struct InstanceData
         {
             public Matrix4x4 objectToWorld;
@@ -44,6 +46,7 @@ namespace FlagRush.Spike
 
         protected override void OnUpdate()
         {
+            SpikeStats.DrawCalls = 0;
             SpikeStats.DrawnInstances = Draw(_swarmQuery, _swarmMaterial) + Draw(_ghostQuery, _ghostMaterial);
         }
 
@@ -51,8 +54,13 @@ namespace FlagRush.Spike
         {
             var matrices = query.ToComponentDataArray<LocalToWorld>(Allocator.Temp);
             int count = matrices.Length;
-            if (count > 0)
-                Graphics.RenderMeshInstanced(new RenderParams(material), _mesh, 0, matrices.Reinterpret<InstanceData>());
+            var instances = matrices.Reinterpret<InstanceData>();
+            var rp = new RenderParams(material) { worldBounds = new Bounds(Vector3.zero, Vector3.one * 200f) };
+            for (int start = 0; start < count; start += MaxPerCall)
+            {
+                Graphics.RenderMeshInstanced(rp, _mesh, 0, instances, Mathf.Min(MaxPerCall, count - start), start);
+                SpikeStats.DrawCalls++;
+            }
             matrices.Dispose();
             return count;
         }

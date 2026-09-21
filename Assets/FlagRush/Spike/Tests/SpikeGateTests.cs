@@ -18,7 +18,7 @@ namespace FlagRush.Spike.Tests
 
             Debug.Log($"[SpikeGate] burstManaged={SpikeStats.SwarmJobRanManaged} threads={SpikeStats.SwarmJobThreadsSeen}/{SpikeStats.JobWorkerCount} frames={SpikeStats.SwarmFrames} " +
                       $"connected={SpikeStats.ClientConnected} inGame={SpikeStats.ClientInGame} ghostsClient={SpikeStats.GhostsOnClient} ghostsServer={SpikeStats.GhostsOnServer} " +
-                      $"newestTick={SpikeStats.NewestReplicatedTick} serverTick={SpikeStats.ServerTick} rtt={SpikeStats.EstimatedRttMs:F1} subScene={SpikeStats.SubSceneEntitiesClient}/{SpikeStats.SubSceneEntitiesServer} drawn={SpikeStats.DrawnInstances} err='{SpikeStats.LastError}'");
+                      $"newestTick={SpikeStats.NewestReplicatedTick} serverTick={SpikeStats.ServerTick} rtt={SpikeStats.EstimatedRttMs:F1} subScene={SpikeStats.SubSceneEntitiesClient}/{SpikeStats.SubSceneEntitiesServer} drawn={SpikeStats.DrawnInstances} draws={SpikeStats.DrawCalls} jobMs={SpikeStats.SwarmJobMs:F3} net={SpikeStats.SnapshotBytesPerSecond:F0}B/s@{SpikeStats.SnapshotsPerSecond:F0}/s loss={SpikeStats.PacketLossPercent:F1}% tick={SpikeStats.SimulationTickRate}/{SpikeStats.NetworkTickRate} err='{SpikeStats.LastError}'");
 
             Assert.That(SpikeStats.SwarmFrames, Is.GreaterThan(0), "swarm job never ran");
             Assert.That(SpikeStats.SwarmJobRanManaged, Is.False, "(a) swarm job body executed as managed code, not Burst");
@@ -28,11 +28,13 @@ namespace FlagRush.Spike.Tests
             Assert.That(SpikeStats.NewestReplicatedTick, Is.GreaterThan(0u), "(b) ghost fields never updated on the client");
             Assert.That(SpikeStats.SubSceneEntitiesClient, Is.EqualTo(3), "(c) SubScene entities missing on the client");
             Assert.That(SpikeStats.DrawnInstances, Is.EqualTo(SwarmSystem.AgentCount + SpikeServerSystem.GhostCount), "render bridge drew the wrong number of instances");
+            Assert.That(SpikeStats.SnapshotsPerSecond, Is.GreaterThan(0f), "no snapshot bytes were measured on the wire");
         }
 
         static bool AllGreen() =>
             SpikeStats.SwarmFrames > 30 && !SpikeStats.SwarmJobRanManaged && SpikeStats.SwarmJobThreadsSeen > 1 &&
             SpikeStats.ClientInGame && SpikeStats.GhostsOnClient == SpikeServerSystem.GhostCount && SpikeStats.NewestReplicatedTick > 0 &&
-            SpikeStats.SubSceneEntitiesClient == 3 && SpikeStats.DrawnInstances == SwarmSystem.AgentCount + SpikeServerSystem.GhostCount;
+            SpikeStats.SubSceneEntitiesClient == 3 && SpikeStats.DrawnInstances == SwarmSystem.AgentCount + SpikeServerSystem.GhostCount &&
+            SpikeStats.SnapshotsPerSecond > 0f;
     }
 }

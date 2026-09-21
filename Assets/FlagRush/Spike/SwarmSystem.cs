@@ -1,3 +1,4 @@
+using System.Diagnostics;
 using Unity.Burst;
 using Unity.Collections;
 using Unity.Collections.LowLevel.Unsafe;
@@ -17,11 +18,12 @@ namespace FlagRush.Spike
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct SwarmSystem : ISystem
     {
-        public const int AgentCount = 150;
+        public static int AgentCount => SpikeConfig.Agents;
 
         NativeArray<int> _threadHits;   // 1 per thread index that executed a chunk
         NativeArray<int> _managedFlag;  // [0] set to 1 only when the body runs without Burst
         float _time;
+        long _jobStart;
 
         public void OnCreate(ref SystemState state)
         {
@@ -54,6 +56,7 @@ namespace FlagRush.Spike
         {
             _time += SystemAPI.Time.DeltaTime;
             _managedFlag[0] = 0; // per-frame readout: in the Editor Burst JITs asynchronously, so early frames run managed
+            _jobStart = Stopwatch.GetTimestamp();
             state.Dependency = new SwarmMoveJob
             {
                 Time = _time,
@@ -61,6 +64,8 @@ namespace FlagRush.Spike
                 ManagedFlag = _managedFlag,
             }.ScheduleParallel(state.Dependency);
             state.Dependency.Complete();
+            float ms = (Stopwatch.GetTimestamp() - _jobStart) * 1000f / Stopwatch.Frequency;
+            SpikeStats.SwarmJobMs = SpikeStats.SwarmFrames < 10 ? ms : SpikeStats.SwarmJobMs * 0.95f + ms * 0.05f;
 
             int seen = 0;
             for (int i = 0; i < _threadHits.Length; i++) if (_threadHits[i] != 0) seen++;

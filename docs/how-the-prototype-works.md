@@ -20,7 +20,8 @@ built on.
 | **8 orange cubes** in a neat ring | "ghosts": objects that the **server** moves and the client only *receives*. Their position arrives through the network layer every tick | the **server** world; the client holds a copy |
 | **The grey panel** top-left | a readout of the three experiments: PASS/FAIL for Burst + threads, networking, and level loading, plus live numbers (ticks, ghost counts, round-trip time) | a plain Unity `MonoBehaviour` that just prints numbers |
 
-The camera is fixed. There is no input, no goal, no score. That is deliberate: every line of code in
+The camera is fixed. There is no input, no goal, no score. You can change the counts with
+`?agents=5000&ghosts=200` in the address bar. That is deliberate: every line of code in
 this prototype exists to answer one question — *does this technology work in a browser?* — and the
 answer is yes.
 
@@ -130,7 +131,29 @@ That 2–5 tick gap is the cost of packing, sending and unpacking — the same l
 
 ---
 
-## 5. Why each experiment mattered (and what "PASS" means)
+## 5. Reading the panel: what each number means
+
+Every row on the panel is *measurement → meaning*. Here is the same list with a little more room.
+
+| Row | Example | What it tells you |
+|---|---|---|
+| **Burst-compiled job** | YES | The code that moves the blue agents was compiled by Burst into native WebAssembly. If this said NO, the slow "managed" C# path ran instead. The test is a trap: a call that Burst deletes at compile time; if it ever runs, we know Burst did not. |
+| **Worker threads used** | 6 (5 workers + main) | How many different CPU threads actually touched the agents this frame. More than 1 means the browser gave us real multithreading (it only does so on a page with the COOP/COEP headers). |
+| **Job time** | 0.02 ms / 150 agents | Wall-clock time from scheduling the job to it finishing. Divide by agents for the per-agent cost; the panel extrapolates to 10,000 agents so the headroom is obvious. |
+| **Frame time** | 16.7 ms (60 fps) | Everything — both worlds, the job, the network layer, rendering — inside one frame. The browser caps this at the display refresh rate. |
+| **Connection** | in-game over IPC | The client did the full netcode handshake (protocol version, network id) and then asked for game state. Until this says *in-game*, no ghosts flow. |
+| **Replicated objects** | 8 / 8 | Server-owned objects that exist on the client. The client never creates these itself; each one was spawned because a snapshot described it. |
+| **Server → client bandwidth** | 2.6 KB/s · 60 snapshots/s · 44 B each | Bytes actually written into the transport per second, how many snapshot packets that was, and their average size. Divide by objects and ticks for the per-object cost; the panel extrapolates to 150 objects — the number of players the real game targets. |
+| **Snapshot age** | 3 ticks (50 ms) | The server's tick minus the newest tick the client has decoded. This is how far in the past the client is showing you. It is *meant* to be non-zero: the client deliberately holds a small buffer so movement stays smooth if a packet is late. |
+| **Round trip** | ~15 ms | Time for a packet to go client → server → client, measured by the netcode acks. On a real network this becomes your ping; here it is mostly frame scheduling. |
+| **Packet loss** | 0% | Snapshots the client expected but never got. IPC cannot drop packets; a real network can, and the same counter will show it. |
+| **Tick rate** | 60 sim / 60 net | The server advances the simulation 60 times a second and sends a snapshot every tick. All the other timings are counted in these ticks. |
+| **SubScene entities** | 3 / 3 client · 3 / 3 server | Entities that came from the baked level file. Both worlds load the level independently. |
+| **Draw calls** | 2 for 158 objects | One GPU draw for all blue cubes, one for all orange. Adding objects adds instances, not draw calls (up to 1,023 per call). |
+
+---
+
+## 6. Why each experiment mattered (and what "PASS" means)
 
 **(a) Burst + worker threads.** Burst is Unity's compiler that turns C# jobs into fast native code.
 On the web this has to become WebAssembly, and worker threads only exist if the page is served with
@@ -154,7 +177,7 @@ simpler than the official path and works everywhere, so it will stay.
 
 ---
 
-## 6. How this connects to the real game
+## 7. How this connects to the real game
 
 - The **Domain** layer (`Assets/FlagRush/Domain`) defines *what the game's data means*: ids, aspects
   like `ICarryable`/`ICarrier`, relationships as `(Kind, Subject, Object)` rows, and a pure
@@ -167,7 +190,7 @@ simpler than the official path and works everywhere, so it will stay.
 
 ---
 
-## 7. Glossary
+## 8. Glossary
 
 | Word | Meaning here |
 |---|---|
@@ -185,7 +208,7 @@ simpler than the official path and works everywhere, so it will stay.
 | **SubScene** | an ECS level file, baked at build time, streamed in at runtime |
 | **COOP/COEP** | HTTP headers a web page needs before the browser allows multithreading |
 
-## 8. Where things live
+## 9. Where things live
 
 ```
 Assets/FlagRush/Spike/
@@ -200,6 +223,8 @@ Assets/FlagRush/Spike/
   InstancedRenderSystem.cs   draws everything (no Entities Graphics)
   SpikeHud.cs                the grey panel
   SpikeStats.cs              the shared numbers the panel reads
+  SpikeConfig.cs             ?agents= / ?ghosts= knobs
+  NetStatsSystem.cs          measures bytes and packets actually crossing the transport
   Tests/SpikeGateTests.cs    the same PASS/FAIL checks as an automated test
   Editor/                    headless scene setup + Web/Windows build scripts
 Tools/serve.py               local web server with the COOP/COEP headers

@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en-us">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>FlagRush — networking simulator spike</title>
+    <script src="coi-serviceworker.js"></script>
+    <style>
+      html, body { margin: 0; height: 100%; background: #16161a; color: #c9c9d1; font: 14px/1.4 system-ui, sans-serif; }
+      #top { position: fixed; top: 0; left: 0; right: 0; height: 36px; display: flex; align-items: center; gap: 16px;
+             padding: 0 14px; background: #101014; border-bottom: 1px solid #2a2a33; z-index: 2; }
+      #top b { color: #fff; }
+      #top a { color: #7fb4ff; text-decoration: none; }
+      #top .dim { color: #7c7c88; }
+      #stage { position: absolute; top: 36px; left: 0; right: 0; bottom: 0; }
+      #unity-canvas { width: 100%; height: 100%; display: block; background: #16161a; }
+      #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; }
+      #bar { width: 260px; height: 6px; background: #2a2a33; border-radius: 3px; overflow: hidden; }
+      #fill { width: 0; height: 100%; background: #7fb4ff; }
+      #warn { position: fixed; bottom: 12px; left: 12px; right: 12px; z-index: 3; }
+      #warn div { background: #3a1e1e; color: #ffb3b3; padding: 8px 12px; border-radius: 4px; margin-top: 6px; }
+    </style>
+#if SHOW_DIAGNOSTICS
+    <link rel="stylesheet" href="<<<TemplateData/diagnostics.css>>>">
+    <script src="<<<TemplateData/diagnostics.js>>>"></script>
+#endif
+  </head>
+  <body>
+    <div id="top">
+      <b>FlagRush</b><span class="dim">Unity 6.6 · DOTS · Netcode for Entities · WebGPU</span>
+      <span class="dim">A server and a client run inside this tab; the panel explains every number.</span>
+      <span style="margin-left:auto"><a href="https://github.com/Mesmoraz/FlagRush">source on GitHub</a> · <a href="https://github.com/Mesmoraz/FlagRush/blob/main/docs/how-the-prototype-works.md">how it works</a></span>
+    </div>
+    <div id="stage">
+      <canvas id="unity-canvas" tabindex="-1"></canvas>
+      <div id="loading"><div>loading…</div><div id="bar"><div id="fill"></div></div><div class="dim" id="note"></div></div>
+    </div>
+    <div id="warn"></div>
+    <script src="Build/{{{ LOADER_FILENAME }}}"></script>
+    <script>
+      const note = document.getElementById("note");
+      if (!window.crossOriginIsolated) note.textContent = "enabling worker threads (one reload)…";
+      else if (!navigator.gpu) note.textContent = "no WebGPU in this browser — falling back to WebGL2";
+      function showBanner(msg, type) {
+        const box = document.getElementById("warn"); const d = document.createElement("div"); d.textContent = msg; box.appendChild(d);
+        if (type !== "error") setTimeout(() => box.removeChild(d), 6000);
+      }
+      createUnityInstance(document.querySelector("#unity-canvas"), {
+        arguments: [],
+#if PROGRESSIVE_ASSET_LOADING
+        primaryDataUrls: {{{ JSON.stringify(PRIMARY_DATA_FILES) }}},
+        secondaryDataUrls: {{{ JSON.stringify(SECONDARY_DATA_FILES) }}},
+#else
+        dataUrl: "Build/{{{ DATA_FILENAME }}}",
+#endif
+        frameworkUrl: "Build/{{{ FRAMEWORK_FILENAME }}}",
+#if USE_WASM
+        codeUrl: "Build/{{{ CODE_FILENAME }}}",
+#endif
+#if SYMBOLS_FILENAME
+        symbolsUrl: "Build/{{{ SYMBOLS_FILENAME }}}",
+#endif
+        streamingAssetsUrl: "StreamingAssets",
+        companyName: {{{ JSON.stringify(COMPANY_NAME) }}},
+        productName: {{{ JSON.stringify(PRODUCT_NAME) }}},
+        productVersion: {{{ JSON.stringify(PRODUCT_VERSION) }}},
+        showBanner: showBanner,
+      }, (p) => { document.getElementById("fill").style.width = (p * 100) + "%"; })
+      .then(() => { document.getElementById("loading").remove(); })
+      .catch((m) => { showBanner(m, "error"); });
+    </script>
+  </body>
+</html>

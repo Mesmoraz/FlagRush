@@ -11,18 +11,38 @@ namespace FlagRush.Spike.Editor
     {
         static readonly string[] Scenes = { "Assets/Scenes/SampleScene.unity" };
 
-        [MenuItem("FlagRush/Build/Web (WebGPU, threads)")]
+        /// <summary>Release build for hosting (GitHub Pages / itch.io): Brotli files plus the JS decompression
+        /// fallback, so it works on hosts that cannot set Content-Encoding.</summary>
+        [MenuItem("FlagRush/Build/Web release (WebGPU, threads, Brotli)")]
         public static void BuildWeb()
+        {
+            ApplyWebSettings();
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
+            PlayerSettings.WebGL.decompressionFallback = true;
+            PlayerSettings.WebGL.showDiagnostics = false;
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Medium);
+            Build(BuildTarget.WebGL, "Builds/Web", BuildOptions.None);
+        }
+
+        /// <summary>Development build for local testing: uncompressed, readable stack traces, diagnostics overlay.</summary>
+        [MenuItem("FlagRush/Build/Web dev (uncompressed)")]
+        public static void BuildWebDev()
+        {
+            ApplyWebSettings();
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled;
+            PlayerSettings.WebGL.decompressionFallback = false;
+            PlayerSettings.WebGL.showDiagnostics = true;
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
+            Build(BuildTarget.WebGL, "Builds/WebDev", BuildOptions.Development);
+        }
+
+        static void ApplyWebSettings()
         {
             PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.WebGL, false);
             PlayerSettings.SetGraphicsAPIs(BuildTarget.WebGL, new[] { GraphicsDeviceType.WebGPU, GraphicsDeviceType.OpenGLES3 });
-            PlayerSettings.WebGL.threadsSupport = true;                         // "Enable Native C/C++ Multithreading"
-            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Disabled; // plain files for the local COOP/COEP server
-            PlayerSettings.WebGL.decompressionFallback = false;
-            PlayerSettings.WebGL.showDiagnostics = true;
+            PlayerSettings.WebGL.threadsSupport = true;                 // "Enable Native C/C++ Multithreading"
+            PlayerSettings.WebGL.template = "PROJECT:FlagRush";         // Assets/WebGLTemplates/FlagRush
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.WebGL, ScriptingImplementation.IL2CPP);
-            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
-            Build(BuildTarget.WebGL, "Builds/Web", BuildOptions.Development);
         }
 
         [MenuItem("FlagRush/Build/Windows (IL2CPP)")]
