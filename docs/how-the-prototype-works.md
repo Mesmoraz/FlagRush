@@ -153,7 +153,45 @@ Every row on the panel is *measurement → meaning*. Here is the same list with 
 
 ---
 
-## 6. Why each experiment mattered (and what "PASS" means)
+## 6. Level 2 — the sandbox: cause the numbers yourself
+
+Open `?level=2`. A control panel appears on the right. Every control has an *expect:* line under it;
+the point of the page is that the expectation comes true on the left. Three experiments to try:
+
+**Experiment 1 — latency is visible, interpolation hides it.**
+Drag *Link latency* to 100 ms. *Round trip* climbs to ~200 ms (both directions are delayed) and
+*Snapshot age* climbs by ~100 ms: the client is now showing you the server's world a tenth of a
+second later than before. The orange cubes still move smoothly, because the client always renders
+slightly in the past on purpose (the interpolation buffer). Now press *Satellite* (300 ms, 3 % loss):
+still smooth, just further behind.
+
+**Experiment 2 — bandwidth is per object, per tick.**
+Drag *Replicated objects* from 8 to 400. *Server → client bandwidth* rises roughly 50×; *snapshots/s*
+stays at 60 — packets got bigger, not more frequent. Now set *Network tick rate* to 20: snapshots/s
+drops to 20, bandwidth drops to about a third, and *Snapshot age* grows, because there is now up to
+50 ms between updates. This is the trade a real game makes for 150 players: fewer, larger snapshots.
+
+**Experiment 3 — losing the connection is a data problem, not a crash.**
+Press *Kill connection*. The orange cubes vanish (the client no longer trusts its copies), the
+*Connection* row turns red, and about three seconds later the reconnect system asks the server again:
+the handshake repeats, the cubes reappear — spawned again from snapshots — and *Reconnects* ticks up.
+Press *Freeze server* instead: the cubes stop (no new state), *Snapshot age* climbs steadily, and after
+30 s the client gives up and reconnects the same way.
+
+**How the knobs work.**
+
+| Control | What it changes | Where |
+|---|---|---|
+| Agents / Replicated objects | spawn or destroy entities until the world matches the slider (bounded per frame) | client `SwarmSystem` / server `ProbeServerSystem` |
+| Latency / jitter / loss | a **simulator pipeline stage** in the client's transport driver delays, jitters or drops packets in both directions; changed live with `ModifySimulatorStageParameters` | `IpcOnlyDriverConstructor`, `SandboxClientSystem` |
+| Network tick rate | `ClientServerTickRate.NetworkTickRate` on the server; because the client learns tick rates during the handshake, the change forces a reconnect | `SandboxServerSystem` |
+| Interpolation delay | `ClientTickRate.InterpolationTimeMS` on the client (0 = netcode's own default) | `SandboxClientSystem` |
+| Freeze server | disables the server world's `SimulationSystemGroup` — nothing ticks, nothing is sent | `DemoHud.SetServerFrozen` |
+| Kill connection | adds `NetworkStreamRequestDisconnect` to the connection entity | `SandboxClientSystem`, healed by `ReconnectSystem` |
+
+---
+
+## 7. Why each experiment mattered (and what "PASS" means)
 
 **(a) Burst + worker threads.** Burst is Unity's compiler that turns C# jobs into fast native code.
 On the web this has to become WebAssembly, and worker threads only exist if the page is served with
@@ -177,7 +215,7 @@ simpler than the official path and works everywhere, so it will stay.
 
 ---
 
-## 7. How this connects to the real game
+## 8. How this connects to the real game
 
 - The **Domain** layer (`Assets/FlagRush/Domain`) defines *what the game's data means*: ids, aspects
   like `ICarryable`/`ICarrier`, relationships as `(Kind, Subject, Object)` rows, and a pure
@@ -190,7 +228,7 @@ simpler than the official path and works everywhere, so it will stay.
 
 ---
 
-## 8. Glossary
+## 9. Glossary
 
 | Word | Meaning here |
 |---|---|
@@ -208,7 +246,7 @@ simpler than the official path and works everywhere, so it will stay.
 | **SubScene** | an ECS level file, baked at build time, streamed in at runtime |
 | **COOP/COEP** | HTTP headers a web page needs before the browser allows multithreading |
 
-## 9. Where things live
+## 10. Where things live
 
 ```
 Assets/FlagRush/Demo/
@@ -225,6 +263,8 @@ Assets/FlagRush/Demo/
   DemoStats.cs              the shared numbers the panel reads
   DemoConfig.cs             ?agents= / ?ghosts= knobs
   NetStatsSystem.cs          measures bytes and packets actually crossing the transport
+  Sandbox.cs                 the live knobs (Level 2)
+  SandboxSystems.cs          applies the knobs: simulator stage, interpolation, tick rate, disconnect
   Tests/DemoGateTests.cs    the same PASS/FAIL checks as an automated test
   Editor/                    headless scene setup + Web/Windows build scripts
 Tools/serve.py               local web server with the COOP/COEP headers

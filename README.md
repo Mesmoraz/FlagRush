@@ -16,7 +16,7 @@ would. 150 blue agents are moved by a Burst-compiled job on worker threads; 8 or
 by the server and reach the client only through network snapshots. The panel explains every number.
 [Plain-language tour →](docs/how-the-prototype-works.md)
 
-Add `?agents=5000&ghosts=200` to the URL to push it.
+Open the **Sandbox** tab (`?level=2`) for live controls: latency/jitter/loss, tick rate, object counts, interpolation, freeze/kill.
 
 ## What the numbers mean
 
@@ -45,7 +45,8 @@ Values above were measured in Chromium on a 20-core Windows machine; see
 |---|---|---|
 | 1 | Engine-free domain contracts (`Assets/FlagRush/Domain`) + tests | done |
 | 2 | Web de-risk spike: Entities + Burst + Netcode for Entities in the browser — all gates pass, published | done |
-| 3 | CTF rule set, bots, prediction/interpolation, relevancy, persistence | next |
+| 2b | Sandbox: live knobs for counts, tick rate, link latency/jitter/loss, interpolation, freeze/kill ([roadmap](docs/roadmap.md)) | done |
+| 3 | Player: WASD-controlled predicted ghost, bots on the same input path | next |
 | 4 | Dedicated server (UDP + WebSocket) + browser/native clients in one match | planned |
 | 5 | itch.io publish | planned |
 
