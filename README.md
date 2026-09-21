@@ -22,7 +22,9 @@ inventory, crafting/production loops, vehicles — all built as *simple* systems
 Assets/FlagRush/Domain        plain C# contracts: ids, aspects, relationships, simulation step, ports
 Assets/FlagRush/Domain.Tests  in-memory fakes + NUnit tests (EditMode)
 Assets/Editor/ProjectBootstrap headless package install / save helpers
+docs/how-the-prototype-works.md  plain-language tour of what runs today and how the data flows
 docs/domain-model.md          the model, the one rule, and how it maps to the requirements
+docs/m1-web-spike.md          measured Web gate results and gotchas
 ```
 
 ## Build / test
