@@ -62,6 +62,7 @@ Tools/deploy-pages.ps1          pushes Builds/Web to the gh-pages branch
 docs/how-the-prototype-works.md plain-language tour of what runs today and how the data flows
 docs/domain-model.md            the model, the one rule, and how it maps to the requirements
 docs/m1-web-spike.md            measured Web gate results and gotchas
+docs/roadmap.md                 the level-by-level plan from simulator to usable prototype
 ```
 
 ## Build / test
