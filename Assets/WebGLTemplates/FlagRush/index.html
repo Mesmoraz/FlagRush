@@ -12,6 +12,12 @@
       #top b { color: #fff; }
       #top a { color: #7fb4ff; text-decoration: none; }
       #top .dim { color: #7c7c88; }
+      #levels { display: flex; gap: 4px; }
+      #levels a, #levels .soon { padding: 4px 10px; border-radius: 4px; color: #c9c9d1; text-decoration: none; }
+      #levels a:hover { background: #1e1e26; }
+      #levels a.active { background: #2b3a55; color: #fff; }
+      #levels .soon { color: #55555f; }
+      @media (max-width: 900px) { #blurb { display: none; } }
       #stage { position: absolute; top: 36px; left: 0; right: 0; bottom: 0; }
       #unity-canvas { width: 100%; height: 100%; display: block; background: #16161a; }
       #loading { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; flex-direction: column; gap: 10px; }
@@ -27,8 +33,9 @@
   </head>
   <body>
     <div id="top">
-      <b>FlagRush</b><span class="dim">Unity 6.6 · DOTS · Netcode for Entities · Web</span>
-      <span class="dim">A server and a client run inside this tab; the panel explains every number.</span>
+      <b>FlagRush</b>
+      <nav id="levels"><a href="?level=1" data-level="1">1 · Simulator</a><a href="?level=2" data-level="2">2 · Sandbox</a><span class="soon">3 · Player</span><span class="soon">4 · Match</span></nav>
+      <span class="dim" id="blurb">A server and a client run inside this tab; the panel explains every number.</span>
       <span style="margin-left:auto"><a href="https://github.com/Mesmoraz/FlagRush">source on GitHub</a> · <a href="https://github.com/Mesmoraz/FlagRush/blob/main/docs/how-the-prototype-works.md">how it works</a></span>
     </div>
     <div id="stage">
@@ -38,6 +45,11 @@
     <div id="warn"></div>
     <script src="Build/{{{ LOADER_FILENAME }}}"></script>
     <script>
+      const level = new URLSearchParams(location.search).get("level") || "1";
+      document.querySelectorAll("#levels a").forEach(a => a.classList.toggle("active", a.dataset.level === level));
+      document.getElementById("blurb").textContent = level === "2"
+        ? "Change a variable on the right, watch the readout on the left move."
+        : "A server and a client run inside this tab; the panel explains every number.";
       const note = document.getElementById("note");
       if (!window.crossOriginIsolated) note.textContent = "enabling worker threads (one reload)…";
       else if (!navigator.gpu) note.textContent = "no WebGPU in this browser — falling back to WebGL2";

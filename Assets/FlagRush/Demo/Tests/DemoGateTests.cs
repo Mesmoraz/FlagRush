@@ -31,6 +31,44 @@ namespace FlagRush.Demo.Tests
             Assert.That(DemoStats.SnapshotsPerSecond, Is.GreaterThan(0f), "no snapshot bytes were measured on the wire");
         }
 
+        [UnityTest]
+        public IEnumerator SandboxKnobsMoveTheReadouts()
+        {
+            SceneManager.LoadScene("SampleScene");
+            yield return Until(() => DemoStats.ClientInGame && DemoStats.GhostsOnClient == Sandbox.Ghosts, 30f);
+
+            // Latency: RTT must follow the slider (both directions are delayed => ~2x).
+            Sandbox.SetLink(100, 0, 0);
+            yield return Until(() => DemoStats.EstimatedRttMs > 150f, 15f);
+            Assert.That(DemoStats.EstimatedRttMs, Is.GreaterThan(150f), "RTT did not follow the latency slider");
+
+            // Ghost count: server reconciles, client receives them all.
+            Sandbox.Ghosts = 40;
+            yield return Until(() => DemoStats.GhostsOnClient == 40, 15f);
+            Assert.That(DemoStats.GhostsOnClient, Is.EqualTo(40), "ghost count did not reconcile");
+
+            // Agent count: client reconciles and the render bridge draws them.
+            Sandbox.Agents = 1200;
+            yield return Until(() => DemoStats.SwarmCount == 1200 && DemoStats.DrawnInstances == 1240, 10f);
+            Assert.That(DemoStats.DrawnInstances, Is.EqualTo(1240), "agent count did not reconcile");
+
+            // Kill the connection: the reconnect system must heal it.
+            int reconnects = Sandbox.Reconnects;
+            Sandbox.KillConnectionRequested = true;
+            yield return Until(() => !DemoStats.ClientConnected, 5f);
+            yield return Until(() => DemoStats.ClientInGame && DemoStats.GhostsOnClient == 40, 20f);
+            Assert.That(Sandbox.Reconnects, Is.GreaterThan(reconnects), "no reconnect happened");
+
+            Debug.Log($"[DemoGate] sandbox rtt={DemoStats.EstimatedRttMs:F0} ghosts={DemoStats.GhostsOnClient} agents={DemoStats.SwarmCount} reconnects={Sandbox.Reconnects}");
+            Sandbox.SetLink(0, 0, 0); Sandbox.Ghosts = DemoConfig.DefaultGhosts; Sandbox.Agents = DemoConfig.DefaultAgents;
+        }
+
+        static IEnumerator Until(System.Func<bool> condition, float timeoutSeconds)
+        {
+            float deadline = Time.realtimeSinceStartup + timeoutSeconds;
+            while (Time.realtimeSinceStartup < deadline && !condition()) yield return null;
+        }
+
         static bool AllGreen() =>
             DemoStats.SwarmFrames > 30 && !DemoStats.SwarmJobRanManaged && DemoStats.SwarmJobThreadsSeen > 1 &&
             DemoStats.ClientInGame && DemoStats.GhostsOnClient == ProbeServerSystem.GhostCount && DemoStats.NewestReplicatedTick > 0 &&

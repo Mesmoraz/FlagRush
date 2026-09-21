@@ -18,7 +18,7 @@ namespace FlagRush.Demo
     [UpdateInGroup(typeof(SimulationSystemGroup))]
     public partial struct SwarmSystem : ISystem
     {
-        public static int AgentCount => DemoConfig.Agents;
+        public static int AgentCount => Sandbox.Agents;
 
         NativeArray<int> _threadHits;   // 1 per thread index that executed a chunk
         NativeArray<int> _managedFlag;  // [0] set to 1 only when the body runs without Burst
@@ -30,20 +30,42 @@ namespace FlagRush.Demo
             _threadHits = new NativeArray<int>(JobsUtility.ThreadIndexCount, Allocator.Persistent);
             _managedFlag = new NativeArray<int>(1, Allocator.Persistent);
 
-            var random = new Random(12345);
-            for (int i = 0; i < AgentCount; i++)
-            {
-                var e = state.EntityManager.CreateEntity(typeof(SwarmAgent), typeof(LocalTransform), typeof(LocalToWorld));
-                state.EntityManager.SetComponentData(e, new SwarmAgent
-                {
-                    Phase = random.NextFloat(0f, math.PI * 2f),
-                    Radius = random.NextFloat(8f, 22f),
-                    Speed = random.NextFloat(0.2f, 0.9f),
-                });
-                state.EntityManager.SetComponentData(e, LocalTransform.FromScale(0.5f));
-            }
-            DemoStats.SwarmCount = AgentCount;
+            _random = new Random(12345);
+            _query = state.GetEntityQuery(ComponentType.ReadOnly<SwarmAgent>());
             DemoStats.JobWorkerCount = JobsUtility.JobWorkerCount;
+        }
+
+        Random _random;
+        EntityQuery _query;
+
+        /// <summary>Spawn or destroy agents so the world matches the sandbox count (bounded per frame to avoid hitches).</summary>
+        void Reconcile(ref SystemState state)
+        {
+            int have = _query.CalculateEntityCount();
+            int want = AgentCount;
+            if (have < want)
+            {
+                int n = math.min(want - have, 2000);
+                for (int i = 0; i < n; i++)
+                {
+                    var e = state.EntityManager.CreateEntity(typeof(SwarmAgent), typeof(LocalTransform), typeof(LocalToWorld));
+                    state.EntityManager.SetComponentData(e, new SwarmAgent
+                    {
+                        Phase = _random.NextFloat(0f, math.PI * 2f),
+                        Radius = _random.NextFloat(8f, 22f + math.sqrt(have + i) * 0.25f),
+                        Speed = _random.NextFloat(0.2f, 0.9f),
+                    });
+                    state.EntityManager.SetComponentData(e, LocalTransform.FromScale(0.5f));
+                }
+            }
+            else if (have > want)
+            {
+                int n = math.min(have - want, 2000);
+                var entities = _query.ToEntityArray(Allocator.Temp);
+                state.EntityManager.DestroyEntity(entities.GetSubArray(0, n));
+                entities.Dispose();
+            }
+            DemoStats.SwarmCount = _query.CalculateEntityCount();
         }
 
         public void OnDestroy(ref SystemState state)
@@ -54,6 +76,7 @@ namespace FlagRush.Demo
 
         public void OnUpdate(ref SystemState state)
         {
+            Reconcile(ref state);
             _time += SystemAPI.Time.DeltaTime;
             _managedFlag[0] = 0; // per-frame readout: in the Editor Burst JITs asynchronously, so early frames run managed
             _jobStart = Stopwatch.GetTimestamp();

@@ -17,14 +17,15 @@ namespace FlagRush.Demo
     [UpdateAfter(typeof(GoInGameSystem))]
     public partial struct ProbeServerSystem : ISystem
     {
-        public static int GhostCount => DemoConfig.Ghosts;
-        bool _spawned;
+        public static int GhostCount => Sandbox.Ghosts;
+        EntityQuery _ghostQuery;
+        int _nextIndex;
 
         public void OnCreate(ref SystemState state)
         {
             state.RequireForUpdate<ProbeGhostPrefab>();
             state.RequireForUpdate<NetworkTime>();
-            DemoStats.GhostTarget = GhostCount;
+            _ghostQuery = state.GetEntityQuery(ComponentType.ReadOnly<ProbeGhost>(), ComponentType.Exclude<Prefab>());
         }
 
         public void OnUpdate(ref SystemState state)
@@ -40,18 +41,8 @@ namespace FlagRush.Demo
             DemoStats.SimulationTickRate = rate.SimulationTickRate;
             DemoStats.NetworkTickRate = rate.NetworkTickRate;
 
-            if (!_spawned && connections > 0)
-            {
-                var prefab = SystemAPI.GetSingleton<ProbeGhostPrefab>().Value;
-                var ecb = new EntityCommandBuffer(Allocator.Temp);
-                for (int i = 0; i < GhostCount; i++)
-                {
-                    var e = ecb.Instantiate(prefab);
-                    ecb.SetComponent(e, new ProbeGhost { Index = i });
-                }
-                ecb.Playback(state.EntityManager);
-                _spawned = true;
-            }
+            DemoStats.GhostTarget = GhostCount;
+            if (connections > 0) Reconcile(ref state);
 
             int ghosts = 0;
             float t = DemoStats.ServerTick / 60f;
@@ -69,6 +60,33 @@ namespace FlagRush.Demo
                 ghosts++;
             }
             DemoStats.GhostsOnServer = ghosts;
+        }
+
+        /// <summary>Instantiate or destroy ghosts so the server matches the sandbox count (bounded per frame).</summary>
+        void Reconcile(ref SystemState state)
+        {
+            int have = _ghostQuery.CalculateEntityCount();
+            int want = GhostCount;
+            if (have < want)
+            {
+                var prefab = SystemAPI.GetSingleton<ProbeGhostPrefab>().Value;
+                var ecb = new EntityCommandBuffer(Allocator.Temp);
+                int n = math.min(want - have, 200);
+                for (int i = 0; i < n; i++)
+                {
+                    var e = ecb.Instantiate(prefab);
+                    ecb.SetComponent(e, new ProbeGhost { Index = _nextIndex++ });
+                }
+                ecb.Playback(state.EntityManager);
+            }
+            else if (have > want)
+            {
+                int n = math.min(have - want, 200);
+                var entities = _ghostQuery.ToEntityArray(Allocator.Temp);
+                state.EntityManager.DestroyEntity(entities.GetSubArray(entities.Length - n, n));
+                entities.Dispose();
+                _nextIndex = math.max(0, _nextIndex - n);
+            }
         }
     }
 }

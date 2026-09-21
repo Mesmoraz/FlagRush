@@ -27,6 +27,7 @@ namespace FlagRush.Demo
         public static int GhostsOnClient;
         public static int GhostTarget;
         public static uint NewestReplicatedTick;  // max ProbeGhost.ServerTick received on the client
+        public static float SnapshotAgeMs;         // (server tick - newest replicated tick) in ms, smoothed
         public static float EstimatedRttMs;
         public static float SnapshotBytesPerSecond;
         public static float SnapshotsPerSecond;

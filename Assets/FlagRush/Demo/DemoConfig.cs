@@ -4,18 +4,20 @@ using UnityEngine;
 namespace FlagRush.Demo
 {
     /// <summary>
-    /// Knobs for the demo, so a viewer can push the numbers: <c>?agents=5000&amp;ghosts=200</c> on the web,
-    /// <c>--agents=5000 --ghosts=200</c> for a native player. Parsed once, clamped to sane ranges.
+    /// Startup knobs from the URL (<c>?level=2&amp;agents=5000&amp;ghosts=200</c>) or command line
+    /// (<c>--level=2 --agents=5000</c>). Parsed once, clamped to sane ranges.
     /// </summary>
     public static class DemoConfig
     {
         public const int DefaultAgents = 150;
         public const int DefaultGhosts = 8;
+        public const int MaxLevel = 2;
 
-        static int? _agents, _ghosts;
+        static int? _agents, _ghosts, _level;
 
-        public static int Agents => _agents ??= Read("agents", DefaultAgents, 1, 50000);
-        public static int Ghosts => _ghosts ??= Read("ghosts", DefaultGhosts, 1, 2000);
+        public static int Level => _level ??= Read("level", 1, 1, MaxLevel);
+        public static int Agents => _agents ??= Read("agents", DefaultAgents, 0, Sandbox.MaxAgents);
+        public static int Ghosts => _ghosts ??= Read("ghosts", DefaultGhosts, 0, Sandbox.MaxGhosts);
 
         static int Read(string key, int fallback, int min, int max)
         {

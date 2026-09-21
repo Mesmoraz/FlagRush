@@ -43,7 +43,7 @@ namespace FlagRush.Demo
             _nextAttempt = now + 3.0;
             if (!ClientServerBootstrap.HasDefaultAddressAndPortSet(out var endpoint)) return;
             SystemAPI.GetSingletonRW<NetworkStreamDriver>().ValueRW.Connect(state.EntityManager, endpoint);
-            DemoStats.LastError = $"reconnecting at t={now:F0}s";
+            Sandbox.Reconnects++;
         }
     }
 }
