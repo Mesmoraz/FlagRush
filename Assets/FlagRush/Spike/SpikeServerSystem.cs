@@ -35,7 +35,7 @@ namespace FlagRush.Spike
             int connections = 0;
             foreach (var _ in SystemAPI.Query<RefRO<NetworkStreamInGame>>()) connections++;
             SpikeStats.ServerConnections = connections;
-            if (!SystemAPI.TryGetSingleton<ClientServerTickRate>(out var rate)) rate = default; // no singleton = netcode defaults
+            if (!SystemAPI.TryGetSingleton<ClientServerTickRate>(out var rate)) rate = default;
             rate.ResolveDefaults();
             SpikeStats.SimulationTickRate = rate.SimulationTickRate;
             SpikeStats.NetworkTickRate = rate.NetworkTickRate;

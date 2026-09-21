@@ -20,7 +20,7 @@ namespace FlagRush.Spike.Editor
             PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
             PlayerSettings.WebGL.decompressionFallback = true;
             PlayerSettings.WebGL.showDiagnostics = false;
-            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Medium);
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Low); // Medium stalled at startup on Web
             Build(BuildTarget.WebGL, "Builds/Web", BuildOptions.None);
         }
 
@@ -36,10 +36,26 @@ namespace FlagRush.Spike.Editor
             Build(BuildTarget.WebGL, "Builds/WebDev", BuildOptions.Development);
         }
 
-        static void ApplyWebSettings()
+        [MenuItem("FlagRush/Build/Web release (WebGL2 only)")]
+        public static void BuildWebGl2()
         {
+            ApplyWebSettings(webGpu: false);
+            PlayerSettings.WebGL.compressionFormat = WebGLCompressionFormat.Brotli;
+            PlayerSettings.WebGL.decompressionFallback = true;
+            PlayerSettings.WebGL.showDiagnostics = false;
+            PlayerSettings.SetManagedStrippingLevel(NamedBuildTarget.WebGL, ManagedStrippingLevel.Low);
+            Build(BuildTarget.WebGL, "Builds/Web", BuildOptions.None);
+        }
+
+        static void ApplyWebSettings(bool webGpu = true)
+        {
+            // The splash blocks frames for seconds on Web: it times out the netcode handshake and skews the
+            // first measurements, and it is what stalls WebGPU release builds at startup.
+            PlayerSettings.SplashScreen.show = false;
             PlayerSettings.SetUseDefaultGraphicsAPIs(BuildTarget.WebGL, false);
-            PlayerSettings.SetGraphicsAPIs(BuildTarget.WebGL, new[] { GraphicsDeviceType.WebGPU, GraphicsDeviceType.OpenGLES3 });
+            PlayerSettings.SetGraphicsAPIs(BuildTarget.WebGL, webGpu
+                ? new[] { GraphicsDeviceType.WebGPU, GraphicsDeviceType.OpenGLES3 }
+                : new[] { GraphicsDeviceType.OpenGLES3 });
             PlayerSettings.WebGL.threadsSupport = true;                 // "Enable Native C/C++ Multithreading"
             PlayerSettings.WebGL.template = "PROJECT:FlagRush";         // Assets/WebGLTemplates/FlagRush
             PlayerSettings.SetScriptingBackend(NamedBuildTarget.WebGL, ScriptingImplementation.IL2CPP);

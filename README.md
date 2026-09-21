@@ -1,9 +1,9 @@
 # FlagRush
 
-**▶ Play the prototype: https://mesmoraz.github.io/FlagRush/** (Chrome/Edge; WebGPU; ~15 MB download)
+**▶ Play the prototype: https://mesmoraz.github.io/FlagRush/** (Chrome/Edge/Firefox; ~13 MB; WebGL2 — see the WebGPU note in [docs/m1-web-spike.md](docs/m1-web-spike.md))
 
 A capture-the-flag **networking simulator** built to demonstrate 100–150 player, server-authoritative
-multiplayer in Unity 6.6 with DOTS (Entities + Netcode for Entities), playable in the browser on WebGPU.
+multiplayer in Unity 6.6 with DOTS (Entities + Netcode for Entities), playable in the browser.
 
 Portfolio game #1. Target skills: modern netcode at scale, state that survives disconnects, physical
 inventory, crafting/production loops, vehicles — all built as *simple* systems.
@@ -44,7 +44,7 @@ Values above were measured in Chromium on a 20-core Windows machine; see
 | Iteration | What | State |
 |---|---|---|
 | 1 | Engine-free domain contracts (`Assets/FlagRush/Domain`) + tests | done |
-| 2 | Web de-risk spike: Entities + Burst + Netcode for Entities on WebGPU — all gates pass, published | done |
+| 2 | Web de-risk spike: Entities + Burst + Netcode for Entities in the browser — all gates pass, published | done |
 | 3 | CTF rule set, bots, prediction/interpolation, relevancy, persistence | next |
 | 4 | Dedicated server (UDP + WebSocket) + browser/native clients in one match | planned |
 | 5 | itch.io publish | planned |
@@ -69,7 +69,7 @@ docs/m1-web-spike.md            measured Web gate results and gotchas
 ```powershell
 unity test  C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --mode EditMode   # domain contracts
 unity test  C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --mode PlayMode   # the prototype gate
-unity build C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --target WebGL --execute-method FlagRush.Spike.Editor.SpikeBuilder.BuildWeb
+unity build C:\Projects\Portfolio\FlagRush --editor-version 6000.6.2f1 --target WebGL --execute-method FlagRush.Spike.Editor.SpikeBuilder.BuildWebGl2   # BuildWeb = WebGPU (release stalls on 6.6.2)
 python Tools\serve.py Builds\Web 8080                                                    # http://localhost:8080
 .\Tools\deploy-pages.ps1                                                                 # publish Builds/Web
 ```

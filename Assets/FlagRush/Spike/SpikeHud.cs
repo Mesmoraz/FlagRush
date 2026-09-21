@@ -28,6 +28,7 @@ namespace FlagRush.Spike
         void Update()
         {
             float ms = Time.unscaledDeltaTime * 1000f;
+            if (ms > 250f) return; // a stall (tab hidden, first frame) is not a frame time
             _frameMs = _frameMs == 0 ? ms : _frameMs * 0.95f + ms * 0.05f;
             SpikeStats.FrameMs = _frameMs;
         }
