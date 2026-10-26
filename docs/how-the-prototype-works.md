@@ -205,12 +205,20 @@ snapshots. Mechanically, the player ghost is spawned *Interpolated* by default a
 copy is switched to *Predicted* when it arrives; the Prediction checkbox switches your cube between the
 two modes (Netcode ignores that switch on an `OwnerPredicted` ghost, so the prefab is not one).
 
+**The HUD at this level.** The left panel is a compact version (title, the network essentials and the
+PLAYER readouts) so it does not cover your cube; press **H** (or its *hide* button) to collapse it to
+its title bar and press H again to bring it back. The camera frames your cube in the strip of screen
+between the left panel and the control panel, not at the screen centre. *Replicated objects* here counts
+the players (you plus the bots) as well as any orange cubes, and with no orange cubes *Snapshot age* is
+measured from the tick the client is interpolating the bots at.
+
 Three experiments to try:
 
 **Experiment 1 — walk at 200 ms latency.**
 Drag *Link latency, one way* to 100 ms (a 200 ms round trip), then walk. Your cube still
-answers the key press in the same frame. *Command age* reads about 6 ticks or more: your input is that
-old by the time the server acts on it, and the thin outline is where the server says you are.
+answers the key press in the same frame. *Command age* is about a round trip: roughly 12 ticks or more
+at a 200 ms round trip (about 2 ticks at a 15 ms one), the time from sending an input until the server
+acknowledges it. The translucent green cube is where the server says you are.
 
 **Experiment 2 — uncheck Prediction.**
 Untick *Prediction* at the same latency. Your cube is now only interpolated, so it starts moving a

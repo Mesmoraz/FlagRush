@@ -147,3 +147,14 @@ into a bot and watch Misprediction spike.
 - Bots use `GhostOwner.NetworkId = -1`, so they are never owned by a connection and are always interpolated.
 - Rollbacks/s counts frames whose first predicted tick is at or before the previous frame's last
   fully predicted tick.
+- Replication is one position per player: `LocalTransform` uses the `DontSerializeVariant` on the player
+  ghost (every world rebuilds it from `PlayerGhost.Position`), and `ServerPosition` is
+  `OwnerSendType = SendToOwner`, so only the owning client receives it (bots, owner -1, never send it).
+  At 150 players this halved the snapshot (966 B → 530 B average, 57.9 → 31.8 KB/s in the Editor).
+- Bot spawn points are a golden-angle spiral filling a 25 m disc (laid out for 149 bots so a bot's point
+  does not move with the slider); humans keep the 10 m ring.
+- The Level 3 HUD is a compact left panel (title, network essentials, PLAYER) that collapses with its
+  button or the H key; the camera frames the player in the screen band between the two panels. HUD
+  verdicts live in `HudVerdicts`: with no agents the Burst/threads rows are info, "Replicated objects"
+  expects probe ghosts + players, and snapshot age falls back to the client's interpolation tick when
+  there are no probe ghosts.

@@ -1,5 +1,11 @@
 # Level 3 Player Implementation Plan
 
+> **As built:** some decisions changed during implementation (most notably the player prefab is not
+> `OwnerPredicted`: it defaults to Interpolated and the owner's copy is spawned Predicted). The tasks below
+> are kept as originally planned; see the spec's
+> [Implementation notes (as built)](../specs/2026-10-25-level3-player-design.md#implementation-notes-as-built)
+> for what actually shipped.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** At `?level=3` the visitor drives a client-predicted player ghost with WASD among up to 149 server-driven bots, with a prediction on/off toggle and readouts that show what prediction is doing.
