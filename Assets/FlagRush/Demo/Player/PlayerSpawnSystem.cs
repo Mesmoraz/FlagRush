@@ -6,11 +6,27 @@ using Unity.Transforms;
 
 namespace FlagRush.Demo
 {
-    /// <summary>Spawn points: a ring of 16 slots, 10 m out, on the ground.</summary>
+    /// <summary>
+    /// Spawn points. Humans: a ring of 16 slots, 10 m out, on the ground. Bots: a golden-angle (sunflower)
+    /// spiral filling a 25 m disc, laid out for <see cref="Sandbox.MaxBots"/> bots so a bot's spawn point does
+    /// not move as the bot slider changes.
+    /// </summary>
     public static class PlayerSpawn
     {
         public const int Slots = 16;
         public const float Radius = 10f;
+        public const float BotDiscRadius = 25f;
+        public const float GoldenAngle = 2.39996f; // radians, pi * (3 - sqrt 5)
+
+        /// <summary>Bot <paramref name="index"/> of <paramref name="count"/>: r = 25 sqrt((i + 0.5) / n), theta = i * golden angle.</summary>
+        public static float3 BotPoint(int index, int count = Sandbox.MaxBots)
+        {
+            int n = math.max(count, 1);
+            int i = math.clamp(index, 0, n - 1);
+            float r = BotDiscRadius * math.sqrt((i + 0.5f) / n);
+            float theta = i * GoldenAngle;
+            return new float3(math.cos(theta) * r, 0f, math.sin(theta) * r);
+        }
 
         public static float3 Point(int slot)
         {
@@ -32,7 +48,6 @@ namespace FlagRush.Demo
     public partial struct PlayerSpawnSystem : ISystem
     {
         public const int MaxBotChangesPerFrame = 50;
-        public const float BotRingRadius = 20f;
 
         EntityQuery _players;
 
@@ -114,7 +129,7 @@ namespace FlagRush.Demo
                 {
                     while (used.Contains(index)) index++;
                     used.Add(index);
-                    var spawn = BotSpawnPoint(index);
+                    var spawn = PlayerSpawn.BotPoint(index);
                     var bot = em.Instantiate(prefab);
                     // No owning connection. Netcode rejects NetworkId 0 on owner-predicted ghosts (GhostSendSystem
                     // logs an error) and documents -1 as "not owned by a player"; clients then interpolate it.
@@ -143,9 +158,6 @@ namespace FlagRush.Demo
             DemoStats.BotsOnServer = have;
         }
 
-        /// <summary>Bot spawn: the spawn-ring slot for <c>16 + index</c>, pushed out to a 20 m ring.</summary>
-        static float3 BotSpawnPoint(int index) => math.normalize(PlayerSpawn.Point(PlayerSpawn.Slots + index)) * BotRingRadius;
-
         struct HighestBotIndexFirst : System.Collections.Generic.IComparer<int2>
         {
             public int Compare(int2 a, int2 b) => b.x.CompareTo(a.x);
@@ -169,8 +181,9 @@ namespace FlagRush.Demo
 
     /// <summary>
     /// Client: counts player ghosts, finds the one this client owns, and points the client connection's
-    /// <see cref="CommandTarget"/> at it so its input buffer is sent to the server. Also drives
-    /// interpolated (non-owned) players' transforms from the replicated position.
+    /// <see cref="CommandTarget"/> at it so its input buffer is sent to the server. Also writes every player's
+    /// LocalTransform (owned and predicted, or interpolated) from <see cref="PlayerGhost.Position"/>; LocalTransform
+    /// itself is not replicated for players.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ClientSimulation)]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
