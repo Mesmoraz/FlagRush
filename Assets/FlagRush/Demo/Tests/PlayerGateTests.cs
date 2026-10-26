@@ -10,7 +10,10 @@ using UnityEngine.TestTools;
 
 namespace FlagRush.Demo.Tests
 {
-    /// <summary>Level 3 gate: one owner-predicted player ghost per connection, moved by its owner's input.</summary>
+    /// <summary>
+    /// Level 3 gate: one player ghost per connection, predicted on its owner's client and interpolated everywhere
+    /// else (the prefab defaults to Interpolated; the owner's spawn is classified predicted), moved by its owner's input.
+    /// </summary>
     public class PlayerGateTests
     {
         [UnitySetUp]
@@ -18,6 +21,7 @@ namespace FlagRush.Demo.Tests
         {
             DemoConfig.OverrideLevel(3);
             Sandbox.Bots = 0;
+            DemoHud.Collapsed = false;
             SceneManager.LoadScene("SampleScene");
             yield return Until(() => DemoStats.ClientInGame, 30f);
             Assert.That(DemoStats.ClientInGame, Is.True, "client never went in-game");
@@ -31,6 +35,7 @@ namespace FlagRush.Demo.Tests
             Sandbox.Bots = 0;
             Sandbox.SetLink(0, 0, 0);
             Sandbox.PredictionEnabled = true;
+            DemoHud.Collapsed = false;
             // Let the server despawn the level-3 players before the next test runs.
             yield return Until(() => DemoStats.PlayersOnServer == 0 && DemoStats.PlayersOnClient == 0, 10f);
             Assert.That(DemoStats.PlayersOnServer, Is.EqualTo(0), "players not despawned on the server below Level 3");
@@ -152,18 +157,22 @@ namespace FlagRush.Demo.Tests
             float localStart = em.GetComponentData<LocalTransform>(owned).Position.x;
             float serverStart = em.GetComponentData<ServerPosition>(owned).Value.x;
 
+            // Spec: the predicted ghost moves within 2 ticks while the server copy cannot have moved yet (the input
+            // needs half a round trip, ~6 ticks, just to reach the server). Count client ticks, not frames: at a high
+            // frame rate two frames can fall inside a single tick.
+            uint startTick = ClientNetworkTick();
             PlayerInputGatherSystem.TestOverride = new PlayerInput { Move = new float2(1, 0) };
-            float local = localStart, server = serverStart;
-            for (int frame = 0; frame < 2 && local <= localStart; frame++)
-            {
+            float tickDeadline = Time.realtimeSinceStartup + 1f;
+            while (ClientNetworkTick() - startTick < 2 && Time.realtimeSinceStartup < tickDeadline)
                 yield return null;
-                local = em.GetComponentData<LocalTransform>(owned).Position.x;
-                server = em.GetComponentData<ServerPosition>(owned).Value.x;
-            }
+            uint ticks = ClientNetworkTick() - startTick;
+            float local = em.GetComponentData<LocalTransform>(owned).Position.x;
+            float server = em.GetComponentData<ServerPosition>(owned).Value.x;
             Debug.Log($"[PlayerGate] local x {localStart:F5} -> {local:F5}, server x {serverStart:F5} -> {server:F5}, " +
                       $"rtt {DemoStats.EstimatedRttMs:F0} ms, command age {DemoStats.CommandAgeTicks} ticks ({DemoStats.CommandAgeMs:F0} ms), " +
                       $"ticks/frame {DemoStats.PredictedTicksPerFrame}, rollbacks/s {DemoStats.RollbacksPerSecond:F1}, misprediction {DemoStats.MispredictionMeters:F3} m");
-            Assert.That(local, Is.GreaterThan(localStart), "prediction did not move the owned ghost within 2 frames");
+            Assert.That(ticks, Is.GreaterThanOrEqualTo(2u), "client did not advance 2 ticks within 1 s");
+            Assert.That(local, Is.GreaterThan(localStart), "prediction did not move the owned ghost within 2 ticks");
             Assert.That(server, Is.EqualTo(serverStart), "server position changed before the input could reach the server");
             Assert.That(DemoStats.CommandAgeTicks, Is.GreaterThanOrEqualTo(6), "command age under 100 ms one-way latency");
         }
@@ -272,6 +281,55 @@ namespace FlagRush.Demo.Tests
             Assert.That(DemoStats.PlayersOnServer, Is.EqualTo(150), "server player count");
             Assert.That(DemoStats.PlayersOnClient, Is.EqualTo(150), "client player count");
             Assert.That(DemoStats.BotsOnServer, Is.EqualTo(149), "BotsOnServer");
+        }
+
+        [UnityTest]
+        public IEnumerator Level3HudShowsNoFalseFail()
+        {
+            Sandbox.Bots = 5;
+            yield return Until(() => DemoStats.PlayersOnServer == 6 && DemoStats.GhostsOnClient == 6 && DemoStats.ClientInterpolationTick > 0, 15f);
+            yield return new WaitForSeconds(0.5f);
+
+            int ageTicks = HudVerdicts.SnapshotAgeTicks(DemoStats.ServerTick, DemoStats.NewestReplicatedTick, DemoStats.ClientInterpolationTick);
+            Debug.Log($"[PlayerGate] hud: agents={DemoStats.SwarmCount} probes={DemoStats.GhostTarget} ghosts={DemoStats.GhostsOnClient} players={DemoStats.PlayersOnServer} " +
+                      $"serverTick={DemoStats.ServerTick} interpTick={DemoStats.ClientInterpolationTick} newestProbe={DemoStats.NewestReplicatedTick} age={ageTicks} ticks");
+            Assert.That(DemoStats.SwarmCount, Is.EqualTo(0), "level 3 runs no agents by default");
+            Assert.That(DemoStats.GhostTarget, Is.EqualTo(0), "level 3 runs no probe ghosts by default");
+            Assert.That(HudVerdicts.Burst(DemoStats.SwarmCount, DemoStats.SwarmFrames, DemoStats.SwarmJobRanManaged), Is.Null, "Burst row must be info, not PASS/FAIL");
+            Assert.That(HudVerdicts.Threads(DemoStats.SwarmCount, DemoStats.SwarmJobThreadsSeen), Is.Null, "threads row must be info, not FAIL");
+            Assert.That(HudVerdicts.Ghosts(DemoStats.GhostsOnClient, DemoStats.GhostTarget, DemoStats.PlayersOnServer, DemoStats.NewestReplicatedTick), Is.True,
+                "replicated objects row must PASS with every player replicated");
+            Assert.That(DemoStats.ClientInGame, Is.True, "connection row");
+            Assert.That(ageTicks, Is.InRange(0, 30), "snapshot age must be the interpolation delay, not the server's uptime");
+        }
+
+        [UnityTest]
+        public IEnumerator CameraFramesPlayerInUncoveredBand()
+        {
+            yield return Until(OnePlayerEachSide, 10f);
+            Assert.That(OnePlayerEachSide(), Is.True, "no player ghost to frame");
+            yield return new WaitForSeconds(1f); // let the camera settle
+            var camera = Camera.main;
+            Assert.That(camera, Is.Not.Null, "no main camera");
+
+            float left = DemoHud.LeftPanelRight, right = DemoHud.ControlPanelLeft;
+            Vector3 player = ClientWorld().EntityManager.GetComponentData<LocalToWorld>(DemoStats.OwnedPlayerEntity).Position;
+            Vector3 screen = camera.WorldToScreenPoint(player);
+            Debug.Log($"[PlayerGate] screen {Screen.width}x{Screen.height}, band x {left:F0}..{right:F0} (centre {DemoHud.UncoveredBandCentre:F0}), player at screen {screen}");
+            Assert.That(right, Is.GreaterThan(left), "no uncovered band at this screen size");
+            Assert.That(screen.z, Is.GreaterThan(0f), "player behind the camera");
+            Assert.That(screen.x, Is.InRange(left, right), "player hidden behind a HUD panel");
+            Assert.That(screen.y, Is.InRange(0f, (float)Screen.height), "player off screen vertically");
+        }
+
+        static uint ClientNetworkTick()
+        {
+            var world = ClientWorld();
+            if (world == null) return 0;
+            using var query = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<NetworkTime>());
+            if (query.IsEmpty) return 0;
+            var tick = query.GetSingleton<NetworkTime>().ServerTick;
+            return tick.IsValid ? tick.TickIndexForValidTick : 0;
         }
 
         static bool OwnedIsPredicted() => OwnedHas(true);

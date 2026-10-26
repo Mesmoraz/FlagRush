@@ -25,7 +25,10 @@ namespace FlagRush.Demo
             DemoStats.EstimatedRttMs = rtt;
 
             if (SystemAPI.TryGetSingleton<NetworkTime>(out var time))
+            {
                 DemoStats.ClientServerTick = time.ServerTick.IsValid ? time.ServerTick.TickIndexForValidTick : 0;
+                DemoStats.ClientInterpolationTick = time.InterpolationTick.IsValid ? time.InterpolationTick.TickIndexForValidTick : 0;
+            }
 
             if (SystemAPI.TryGetSingleton<GhostCount>(out var ghostCount))
                 DemoStats.GhostsOnClient = ghostCount.GhostCountOnClient;

@@ -25,6 +25,7 @@ namespace FlagRush.Demo
         public static int ServerConnections;
         public static uint ServerTick;            // true server tick (same process, so we can read it directly)
         public static uint ClientServerTick;      // the client's own estimate of the server tick
+        public static uint ClientInterpolationTick; // the server tick interpolated ghosts are shown at on the client
         public static int GhostsOnServer;
         public static int GhostsOnClient;
         public static int GhostTarget;
