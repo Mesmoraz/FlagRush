@@ -31,6 +31,9 @@ namespace FlagRush.Demo
     [UpdateAfter(typeof(GoInGameSystem))]
     public partial struct PlayerSpawnSystem : ISystem
     {
+        public const int MaxBotChangesPerFrame = 50;
+        public const float BotRingRadius = 20f;
+
         EntityQuery _players;
 
         public void OnCreate(ref SystemState state)
@@ -45,6 +48,7 @@ namespace FlagRush.Demo
             {
                 if (!_players.IsEmpty) DespawnAll(ref state);
                 DemoStats.PlayersOnServer = 0;
+                DemoStats.BotsOnServer = 0;
                 return;
             }
 
@@ -75,7 +79,76 @@ namespace FlagRush.Demo
             }
             needPlayer.Dispose();
 
+            ReconcileBots(ref state);
             DemoStats.PlayersOnServer = _players.CalculateEntityCount();
+        }
+
+        /// <summary>
+        /// Add or remove unowned bot ghosts, at most <see cref="MaxBotChangesPerFrame"/> per frame, until the bot count
+        /// matches <see cref="Sandbox.Bots"/>. Bots have <c>GhostOwner.NetworkId = -1</c> (no owner) and are never a
+        /// connection's CommandTarget or in its LinkedEntityGroup; only entities with <c>BotIndex &gt;= 0</c> are ever destroyed here.
+        /// </summary>
+        void ReconcileBots(ref SystemState state)
+        {
+            var em = state.EntityManager;
+            int want = math.clamp(Sandbox.Bots, 0, Sandbox.MaxBots);
+
+            var bots = new NativeList<int2>(Allocator.Temp); // (BotIndex, list position) for sorting
+            var botEntities = new NativeList<Entity>(Allocator.Temp);
+            foreach (var (ghost, entity) in SystemAPI.Query<RefRO<PlayerGhost>>().WithEntityAccess())
+            {
+                if (ghost.ValueRO.BotIndex < 0) continue;
+                bots.Add(new int2(ghost.ValueRO.BotIndex, botEntities.Length));
+                botEntities.Add(entity);
+            }
+
+            int have = bots.Length;
+            if (have < want)
+            {
+                var used = new NativeHashSet<int>(have, Allocator.Temp);
+                foreach (var b in bots) used.Add(b.x);
+                var prefab = SystemAPI.GetSingleton<PlayerGhostPrefab>().Value;
+                int toAdd = math.min(want - have, MaxBotChangesPerFrame);
+                int index = 0;
+                for (int n = 0; n < toAdd; n++)
+                {
+                    while (used.Contains(index)) index++;
+                    used.Add(index);
+                    var spawn = BotSpawnPoint(index);
+                    var bot = em.Instantiate(prefab);
+                    // No owning connection. Netcode rejects NetworkId 0 on owner-predicted ghosts (GhostSendSystem
+                    // logs an error) and documents -1 as "not owned by a player"; clients then interpolate it.
+                    em.SetComponentData(bot, new GhostOwner { NetworkId = -1 });
+                    em.SetComponentData(bot, new PlayerGhost { Position = spawn, BotIndex = index });
+                    em.SetComponentData(bot, new ServerPosition { Value = spawn });
+                    em.SetComponentData(bot, LocalTransform.FromPosition(spawn));
+                    em.AddComponentData(bot, BotBrainState.Create(index));
+                }
+                used.Dispose();
+                have += toAdd;
+            }
+            else if (have > want)
+            {
+                bots.Sort(new HighestBotIndexFirst());
+                int toRemove = math.min(have - want, MaxBotChangesPerFrame);
+                var doomed = new NativeArray<Entity>(toRemove, Allocator.Temp);
+                for (int n = 0; n < toRemove; n++) doomed[n] = botEntities[bots[n].y];
+                em.DestroyEntity(doomed);
+                doomed.Dispose();
+                have -= toRemove;
+            }
+
+            bots.Dispose();
+            botEntities.Dispose();
+            DemoStats.BotsOnServer = have;
+        }
+
+        /// <summary>Bot spawn: the spawn-ring slot for <c>16 + index</c>, pushed out to a 20 m ring.</summary>
+        static float3 BotSpawnPoint(int index) => math.normalize(PlayerSpawn.Point(PlayerSpawn.Slots + index)) * BotRingRadius;
+
+        struct HighestBotIndexFirst : System.Collections.Generic.IComparer<int2>
+        {
+            public int Compare(int2 a, int2 b) => b.x.CompareTo(a.x);
         }
 
         /// <summary>Detach every player from its connection (CommandTarget + LinkedEntityGroup), then destroy them.</summary>

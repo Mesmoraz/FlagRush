@@ -44,6 +44,7 @@ namespace FlagRush.Demo
 
         // ---- player (Level 3)
         public static int PlayersOnServer;        // player ghosts alive on the server
+        public static int BotsOnServer;           // bot player ghosts alive on the server (BotIndex >= 0)
         public static int PlayersOnClient;        // player ghosts the client has received
         public static Entity OwnedPlayerEntity;   // client: the ghost this client owns (Entity.Null if none)
         public static bool OwnedPlayerPredicted;  // client: the owned ghost is predicted (has PredictedGhost)
