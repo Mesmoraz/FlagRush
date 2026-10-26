@@ -9,10 +9,33 @@ namespace FlagRush.Demo
     {
         public const int MaxAgents = 20000;
         public const int MaxGhosts = 1000;
+        public const int MaxBots = 149;
         public const int SimulatorPacketBuffer = 4096; // fixed at driver creation; cannot change at runtime
 
-        public static int Agents = DemoConfig.Agents;
-        public static int Ghosts = DemoConfig.Ghosts;
+        public static int Agents;
+        public static int Ghosts;
+        public static int Bots;
+        public static bool PredictionEnabled = true;
+
+        static Sandbox() => ApplyLevelDefaults();
+
+        /// <summary>Level 3+: no swarm/ghosts unless supplied, bots seeded. Below 3: Level 1-2 behaviour, no bots.</summary>
+        public static void ApplyLevelDefaults()
+        {
+            if (DemoConfig.Level >= 3)
+            {
+                Agents = DemoConfig.Supplied("agents") ? DemoConfig.Agents : 0;
+                Ghosts = DemoConfig.Supplied("ghosts") ? DemoConfig.Ghosts : 0;
+                Bots = DemoConfig.Bots;
+            }
+            else
+            {
+                Agents = DemoConfig.Agents;
+                Ghosts = DemoConfig.Ghosts;
+                Bots = 0;
+            }
+            PredictionEnabled = true;
+        }
 
         // link emulation on the client driver, applied to both directions => RTT ~= 2 * LatencyMs
         public static int LatencyMs;
