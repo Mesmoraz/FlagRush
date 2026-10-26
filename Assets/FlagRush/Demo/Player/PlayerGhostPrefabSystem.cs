@@ -1,3 +1,4 @@
+using Unity.Collections;
 using Unity.Entities;
 using Unity.NetCode;
 using Unity.Transforms;
@@ -30,6 +31,17 @@ namespace FlagRush.Demo
             em.SetComponentData(prefab, new PlayerGhost { BotIndex = -1 });
             em.SetName(prefab, "PlayerGhostPrefab");
 
+            // LocalTransform is not replicated: PlayerGhost.Position already carries the position, and every world
+            // derives LocalTransform from it (movement/separation on the server and in prediction, PlayerStatsSystem
+            // on the client). Replicating it too would send the position a second time, plus rotation and scale.
+            using var overrides = new NativeParallelHashMap<GhostPrefabCreation.Component, GhostPrefabCreation.ComponentOverride>(1, Allocator.Temp);
+            overrides.Add(new GhostPrefabCreation.Component { ComponentType = ComponentType.ReadWrite<LocalTransform>(), ChildIndex = 0 },
+                new GhostPrefabCreation.ComponentOverride
+                {
+                    OverrideType = GhostPrefabCreation.ComponentOverrideType.Variant,
+                    Variant = GhostVariantsUtility.DontSerializeHash,
+                });
+
             GhostPrefabCreation.ConvertToGhostPrefab(em, prefab, new GhostPrefabCreation.Config
             {
                 Name = "PlayerGhost",
@@ -39,7 +51,7 @@ namespace FlagRush.Demo
                 // client spawns its own ghost predicted (PlayerSpawnClassificationSystem); everyone else interpolates.
                 DefaultGhostMode = GhostMode.Interpolated,
                 OptimizationMode = GhostOptimizationMode.Dynamic,
-            });
+            }, overrides);
 
             var holder = em.CreateEntity(typeof(PlayerGhostPrefab));
             em.SetComponentData(holder, new PlayerGhostPrefab { Value = prefab });

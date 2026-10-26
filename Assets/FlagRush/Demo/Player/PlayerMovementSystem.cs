@@ -23,10 +23,11 @@ namespace FlagRush.Demo
         {
             float dt = SystemAPI.Time.DeltaTime;
             var arena = ArenaBounds.Default;
-            bool isServer = state.WorldUnmanaged.IsServer();
 
-            foreach (var (ghost, input, transform, serverPosition) in SystemAPI
-                         .Query<RefRW<PlayerGhost>, RefRO<PlayerInput>, RefRW<LocalTransform>, RefRW<ServerPosition>>()
+            // ServerPosition is not touched here: on the server PlayerSeparationSystem runs right after this system
+            // and writes it for every player; on the client it is replicated-only (never written locally).
+            foreach (var (ghost, input, transform) in SystemAPI
+                         .Query<RefRW<PlayerGhost>, RefRO<PlayerInput>, RefRW<LocalTransform>>()
                          .WithAll<Simulate>())
             {
                 var position = ghost.ValueRO.Position;
@@ -35,7 +36,6 @@ namespace FlagRush.Demo
                 ghost.ValueRW.Position = position;
                 ghost.ValueRW.Velocity = velocity;
                 transform.ValueRW.Position = position;
-                if (isServer) serverPosition.ValueRW.Value = position;
             }
         }
     }

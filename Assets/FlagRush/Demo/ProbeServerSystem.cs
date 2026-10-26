@@ -9,8 +9,9 @@ namespace FlagRush.Demo
 {
     /// <summary>
     /// Server authority for the spike: once anyone is connected, spawn a ring of ghosts and move them
-    /// every tick. Position is written to both the ghost field and LocalTransform (LocalTransform is
-    /// not replicated here; the client re-derives it from the ghost field).
+    /// every tick. Position is written to both the ghost field and LocalTransform. LocalTransform IS replicated
+    /// for probes (its default ghost variant); the client nevertheless re-derives it from the ghost field in
+    /// ClientStatsSystem, so the probe's own field is what the HUD and the tests rely on.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
