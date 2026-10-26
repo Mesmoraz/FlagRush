@@ -1,3 +1,5 @@
+using Unity.Entities;
+
 namespace FlagRush.Demo
 {
     /// <summary>
@@ -39,6 +41,12 @@ namespace FlagRush.Demo
         // ---- level: can baked level data load on the web?
         public static int SubSceneEntitiesClient;
         public static int SubSceneEntitiesServer;
+
+        // ---- player (Level 3)
+        public static int PlayersOnServer;        // player ghosts alive on the server
+        public static int PlayersOnClient;        // player ghosts the client has received
+        public static Entity OwnedPlayerEntity;   // client: the ghost this client owns (Entity.Null if none)
+        public static bool OwnedPlayerPredicted;  // client: the owned ghost is predicted (has PredictedGhost)
 
         // ---- rendering
         public static int DrawnInstances;
