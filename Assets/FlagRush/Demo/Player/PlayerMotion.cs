@@ -1,4 +1,3 @@
-using Unity.Burst;
 using Unity.Mathematics;
 
 namespace FlagRush.Demo
@@ -24,10 +23,8 @@ namespace FlagRush.Demo
     }
 
     /// <summary>Pure, deterministic movement step. Runs identically on client (prediction) and server.</summary>
-    [BurstCompile]
     public static class PlayerMotion
     {
-        [BurstCompile]
         public static void Step(ref float3 position, ref float2 velocity, in PlayerInput input, float dt, in ArenaBounds arena)
         {
             float2 move = input.Move;
