@@ -189,6 +189,39 @@ Press *Freeze server* instead: the cubes stop (no new state), *Snapshot age* cli
 | Freeze server | disables the server world's `SimulationSystemGroup` — nothing ticks, nothing is sent | `DemoHud.SetServerFrozen` |
 | Kill connection | adds `NetworkStreamRequestDisconnect` to the connection entity | `SandboxClientSystem`, healed by `ReconnectSystem` |
 
+## 6b. Level 3 — the player: you are the input
+
+Open `?level=3`, click the game once so it gets keyboard focus, and drive the green cube with WASD
+(or a gamepad). Every other cube is a bot: bots do not have a separate code path, they feed the same
+`PlayerInput` into the same movement system as you do. Your input is sent to the server as a
+*command*; the server moves its own copy of you and replicates the result back.
+
+**Why it feels instant: prediction.** Waiting for the server's answer would make every key press lag by
+a full round trip. Instead the client runs the same movement code immediately on your own cube
+(*predicted*), and when the server's snapshot arrives it compares: if they agree, nothing happens; if
+not, the client rewinds to the server's state and replays your recent inputs (a *rollback*). Only your
+own cube is predicted. The bots are other people's state, so the client just interpolates between
+snapshots. Mechanically, the player ghost is spawned *Interpolated* by default and the local owner's
+copy is switched to *Predicted* when it arrives; the Prediction checkbox switches your cube between the
+two modes (Netcode ignores that switch on an `OwnerPredicted` ghost, so the prefab is not one).
+
+Three experiments to try:
+
+**Experiment 1 — walk at 200 ms latency.**
+Drag *Link latency, one way* to 100 ms (a 200 ms round trip), then walk. Your cube still
+answers the key press in the same frame. *Command age* reads about 6 ticks or more: your input is that
+old by the time the server acts on it, and the thin outline is where the server says you are.
+
+**Experiment 2 — uncheck Prediction.**
+Untick *Prediction* at the same latency. Your cube is now only interpolated, so it starts moving a
+round trip after you press a key and the outline disappears. Misprediction reads 0 because there is
+nothing left to mispredict. Re-tick it and the lag vanishes.
+
+**Experiment 3 — walk into a bot.**
+Run into a bot. The server separates overlapping players, but your client predicted a clean walk
+through, so *Misprediction* spikes and *Rollbacks/s* rises until the two agree again. This is the cost
+of prediction: it is a guess, and the server has the last word.
+
 ---
 
 ## 7. Why each experiment mattered (and what "PASS" means)

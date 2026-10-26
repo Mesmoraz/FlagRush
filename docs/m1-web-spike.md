@@ -13,6 +13,18 @@ Claude desktop browser (Chromium), Windows, 20-core machine, development build s
 | custom render bridge (`Graphics.RenderMeshInstanced` from `LocalToWorld`) | PASS, 158 instances | **PASS**, 2 draw calls for 158 objects |
 | release build (Brotli, no splash) on GitHub Pages | – | **PASS** on WebGL2; WebGPU release stalls (see gotchas) |
 
+## Level 3 — Player: 150 players
+
+Gate: `PlayerGateTests.HundredFiftyPlayersReplicate` (1 human + 149 bots, PlayMode). Browser numbers are
+measured on the WebGL2 release build at `?level=3&bots=149`.
+
+| Measure | Editor (PlayMode test) | Browser (WebGL2) |
+|---|---|---|
+| Players on server / client | 150 / 150 | pending |
+| Frame time | 0.61 ms (headless test, unthrottled) | pending |
+| Snapshot bandwidth | 57,929 B/s at 60 snapshots/s (avg 966 B) | pending |
+| Draw calls (drawn instances) | 3 (151) | pending |
+
 ## Decisions confirmed
 
 - **Stay on Netcode for Entities** (no fallback to Netcode for GameObjects needed).

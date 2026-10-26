@@ -49,6 +49,8 @@
       document.querySelectorAll("#levels a").forEach(a => a.classList.toggle("active", a.dataset.level === level));
       document.getElementById("blurb").textContent = level === "2"
         ? "Change a variable on the right, watch the readout on the left move."
+        : level === "3"
+        ? "You drive the green cube; bots use the same input path. Try 200 ms latency."
         : "A server and a client run inside this tab; the panel explains every number.";
       const note = document.getElementById("note");
       if (!window.crossOriginIsolated) note.textContent = "enabling worker threads (one reload)…";

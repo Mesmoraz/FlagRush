@@ -260,6 +260,20 @@ namespace FlagRush.Demo.Tests
             Assert.That(endX - startX, Is.GreaterThan(2f), "camera did not follow the owned ghost");
         }
 
+        [UnityTest]
+        public IEnumerator HundredFiftyPlayersReplicate()
+        {
+            Sandbox.Bots = 149;
+            yield return Until(() => DemoStats.PlayersOnClient == 150 && DemoStats.PlayersOnServer == 150, 20f);
+            yield return new WaitForSeconds(3f); // let the smoothed readouts settle
+            Debug.Log($"[DemoGate] players150 server={DemoStats.PlayersOnServer} client={DemoStats.PlayersOnClient} bots={DemoStats.BotsOnServer} " +
+                      $"frameMs={DemoStats.FrameMs:F2} net={DemoStats.SnapshotBytesPerSecond:F0}B/s@{DemoStats.SnapshotsPerSecond:F0}/s avgSnapshot={DemoStats.AvgSnapshotBytes:F0}B " +
+                      $"draws={DemoStats.DrawCalls} drawn={DemoStats.DrawnInstances}");
+            Assert.That(DemoStats.PlayersOnServer, Is.EqualTo(150), "server player count");
+            Assert.That(DemoStats.PlayersOnClient, Is.EqualTo(150), "client player count");
+            Assert.That(DemoStats.BotsOnServer, Is.EqualTo(149), "BotsOnServer");
+        }
+
         static bool OwnedIsPredicted() => OwnedHas(true);
         static bool OwnedIsInterpolated() => OwnedHas(false);
 

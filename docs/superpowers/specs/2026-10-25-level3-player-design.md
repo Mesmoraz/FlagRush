@@ -137,3 +137,13 @@ into a bot and watch Misprediction spike.
 | Runtime prefab with `OwnerPredicted` + input buffer via `GhostPrefabCreation` (no baking) | spike it as the first implementation task; the PlayMode test 1 is its gate |
 | Web input focus (canvas must have focus for keys) | the web template already focuses the canvas on click; add "click the game to control" to the HUD hint |
 | 150 predicted-capable ghosts on Web | only the owned ghost is predicted; bots are interpolated on the client, so cost ≈ today's 150-ghost sandbox |
+
+## Implementation notes (as built)
+
+- The player prefab is not `OwnerPredicted`. It is `DefaultGhostMode = Interpolated` with
+  `SupportedGhostModes = All`, and a `PlayerSpawnClassificationSystem` spawns the local owner's ghost
+  as Predicted, because Netcode for Entities does nothing when asked to switch prediction on an
+  `OwnerPredicted` ghost at runtime. The Prediction toggle switches the owned ghost between the two modes.
+- Bots use `GhostOwner.NetworkId = -1`, so they are never owned by a connection and are always interpolated.
+- Rollbacks/s counts frames whose first predicted tick is at or before the previous frame's last
+  fully predicted tick.

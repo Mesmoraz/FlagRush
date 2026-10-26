@@ -18,6 +18,8 @@ by the server and reach the client only through network snapshots. The panel exp
 
 Open the **Sandbox** tab (`?level=2`) for live controls: latency/jitter/loss, tick rate, object counts, interpolation, freeze/kill.
 
+Open the **Player** tab (`?level=3`) to drive a green cube with WASD or a gamepad (click the game first), with bots on the same input path, a prediction on/off toggle and live prediction readouts.
+
 ## What the numbers mean
 
 | Panel row | Typical value | It means |
@@ -46,7 +48,7 @@ Values above were measured in Chromium on a 20-core Windows machine; see
 | 1 | Engine-free domain contracts (`Assets/FlagRush/Domain`) + tests | done |
 | 2 | Web de-risk spike: Entities + Burst + Netcode for Entities in the browser — all gates pass, published | done |
 | 2b | Sandbox: live knobs for counts, tick rate, link latency/jitter/loss, interpolation, freeze/kill ([roadmap](docs/roadmap.md)) | done |
-| 3 | Player: WASD-controlled predicted ghost, bots on the same input path | next |
+| 3 | Player: WASD-controlled predicted ghost, bots on the same input path | done |
 | 4 | Dedicated server (UDP + WebSocket) + browser/native clients in one match | planned |
 | 5 | itch.io publish | planned |
 
