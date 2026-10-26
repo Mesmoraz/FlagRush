@@ -11,13 +11,27 @@ namespace FlagRush.Demo
     {
         public const int DefaultAgents = 150;
         public const int DefaultGhosts = 8;
-        public const int MaxLevel = 2;
+        public const int MaxLevel = 3;
+        public const int DefaultBots = 31;
 
-        static int? _agents, _ghosts, _level;
+        static int? _agents, _ghosts, _level, _bots;
 
         public static int Level => _level ??= Read("level", 1, 1, MaxLevel);
         public static int Agents => _agents ??= Read("agents", DefaultAgents, 0, Sandbox.MaxAgents);
         public static int Ghosts => _ghosts ??= Read("ghosts", DefaultGhosts, 0, Sandbox.MaxGhosts);
+        public static int Bots => _bots ??= Read("bots", DefaultBots, 0, Sandbox.MaxBots);
+
+        public static bool IsPlayerLevel => Level >= 3;
+
+        /// <summary>Test hook: force the level (null = re-read URL/args on next access) and re-apply sandbox defaults.</summary>
+        public static void OverrideLevel(int? level)
+        {
+            _level = level;
+            Sandbox.ApplyLevelDefaults();
+        }
+
+        /// <summary>True when the URL or command line explicitly supplied this knob.</summary>
+        public static bool Supplied(string key) => (FromUrl(key) ?? FromArgs(key)) != null;
 
         static int Read(string key, int fallback, int min, int max)
         {

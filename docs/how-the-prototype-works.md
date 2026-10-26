@@ -189,6 +189,47 @@ Press *Freeze server* instead: the cubes stop (no new state), *Snapshot age* cli
 | Freeze server | disables the server world's `SimulationSystemGroup` — nothing ticks, nothing is sent | `DemoHud.SetServerFrozen` |
 | Kill connection | adds `NetworkStreamRequestDisconnect` to the connection entity | `SandboxClientSystem`, healed by `ReconnectSystem` |
 
+## 6b. Level 3 — the player: you are the input
+
+Open `?level=3`, click the game once so it gets keyboard focus, and drive the green cube with WASD
+(or a gamepad). Every other cube is a bot: bots do not have a separate code path, they feed the same
+`PlayerInput` into the same movement system as you do. Your input is sent to the server as a
+*command*; the server moves its own copy of you and replicates the result back.
+
+**Why it feels instant: prediction.** Waiting for the server's answer would make every key press lag by
+a full round trip. Instead the client runs the same movement code immediately on your own cube
+(*predicted*), and when the server's snapshot arrives it compares: if they agree, nothing happens; if
+not, the client rewinds to the server's state and replays your recent inputs (a *rollback*). Only your
+own cube is predicted. The bots are other people's state, so the client just interpolates between
+snapshots. Mechanically, the player ghost is spawned *Interpolated* by default and the local owner's
+copy is switched to *Predicted* when it arrives; the Prediction checkbox switches your cube between the
+two modes (Netcode ignores that switch on an `OwnerPredicted` ghost, so the prefab is not one).
+
+**The HUD at this level.** The left panel is a compact version (title, the network essentials and the
+PLAYER readouts) so it does not cover your cube; press **H** (or its *hide* button) to collapse it to
+its title bar and press H again to bring it back. The camera frames your cube in the strip of screen
+between the left panel and the control panel, not at the screen centre. *Replicated objects* here counts
+the players (you plus the bots) as well as any orange cubes, and with no orange cubes *Snapshot age* is
+measured from the tick the client is interpolating the bots at.
+
+Three experiments to try:
+
+**Experiment 1 — walk at 200 ms latency.**
+Drag *Link latency, one way* to 100 ms (a 200 ms round trip), then walk. Your cube still
+answers the key press in the same frame. *Command age* is about a round trip: roughly 12 ticks or more
+at a 200 ms round trip (about 2 ticks at a 15 ms one), the time from sending an input until the server
+acknowledges it. The translucent green cube is where the server says you are.
+
+**Experiment 2 — uncheck Prediction.**
+Untick *Prediction* at the same latency. Your cube is now only interpolated, so it starts moving a
+round trip after you press a key and the outline disappears. Misprediction reads 0 because there is
+nothing left to mispredict. Re-tick it and the lag vanishes.
+
+**Experiment 3 — walk into a bot.**
+Run into a bot. The server separates overlapping players, but your client predicted a clean walk
+through, so *Misprediction* spikes and *Rollbacks/s* rises until the two agree again. This is the cost
+of prediction: it is a guess, and the server has the last word.
+
 ---
 
 ## 7. Why each experiment mattered (and what "PASS" means)

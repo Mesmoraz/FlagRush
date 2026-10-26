@@ -1,3 +1,5 @@
+using Unity.Entities;
+
 namespace FlagRush.Demo
 {
     /// <summary>
@@ -23,6 +25,7 @@ namespace FlagRush.Demo
         public static int ServerConnections;
         public static uint ServerTick;            // true server tick (same process, so we can read it directly)
         public static uint ClientServerTick;      // the client's own estimate of the server tick
+        public static uint ClientInterpolationTick; // the server tick interpolated ghosts are shown at on the client
         public static int GhostsOnServer;
         public static int GhostsOnClient;
         public static int GhostTarget;
@@ -39,6 +42,18 @@ namespace FlagRush.Demo
         // ---- level: can baked level data load on the web?
         public static int SubSceneEntitiesClient;
         public static int SubSceneEntitiesServer;
+
+        // ---- player (Level 3)
+        public static int PlayersOnServer;        // player ghosts alive on the server
+        public static int BotsOnServer;           // bot player ghosts alive on the server (BotIndex >= 0)
+        public static int PlayersOnClient;        // player ghosts the client has received
+        public static Entity OwnedPlayerEntity;   // client: the ghost this client owns (Entity.Null if none)
+        public static bool OwnedPlayerPredicted;  // client: the owned ghost is predicted (has PredictedGhost)
+        public static int PredictedTicksPerFrame; // client: PredictedSimulationSystemGroup iterations this frame
+        public static float RollbacksPerSecond;   // client: frames whose first predicted tick re-simulated an already fully predicted tick, per second (1 s window)
+        public static int CommandAgeTicks;        // client: NetworkTime.ServerTick - NetworkSnapshotAck.LastReceivedSnapshotByLocal
+        public static float CommandAgeMs;         // client: CommandAgeTicks at the simulation tick rate
+        public static float MispredictionMeters;  // client: |ServerPosition - predicted position at the last received snapshot tick|; 0 with prediction off
 
         // ---- rendering
         public static int DrawnInstances;

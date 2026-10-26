@@ -13,6 +13,44 @@ Claude desktop browser (Chromium), Windows, 20-core machine, development build s
 | custom render bridge (`Graphics.RenderMeshInstanced` from `LocalToWorld`) | PASS, 158 instances | **PASS**, 2 draw calls for 158 objects |
 | release build (Brotli, no splash) on GitHub Pages | – | **PASS** on WebGL2; WebGPU release stalls (see gotchas) |
 
+## Level 3 — Player: 150 players
+
+Gate: `PlayerGateTests.HundredFiftyPlayersReplicate` (1 human + 149 bots, PlayMode). Browser numbers were
+measured in Chromium (the Claude desktop browser) on the WebGL2 build at `?level=3&bots=149`, at
+1600×900 and 1024×768 viewports, after the replication cut (one position per player: `LocalTransform`
+not serialized, `ServerPosition` sent to its owner only).
+
+| Measure | Editor (PlayMode test) | Browser (WebGL2, LAN link) |
+|---|---|---|
+| Players on server / client | 150 / 150 | **150 / 150** (149 bots); Connection PASS, Replicated objects PASS |
+| Frame time | 0.61 ms (headless test, unthrottled) | 12.1–12.3 ms (≈ 82 fps) |
+| Snapshot bandwidth, before the replication cut | 57,929 B/s at 60 snapshots/s (avg 966 B) | 51.7–55 KB/s (≈ 880–934 B per snapshot) |
+| Snapshot bandwidth, after the replication cut | ≈ 32,000 B/s at 60 snapshots/s (avg 527–543 B) | **27.9 KB/s** at 60 snapshots/s (477 B per snapshot) |
+| Round trip / command age | – | ≈ 16 ms / 2 ticks (33 ms) |
+| Draw calls (drawn instances) | 3 (151) | not measured in the browser |
+
+Prediction under latency (browser, 4G preset: 60 ms ±20 ms one way, 2 % loss):
+
+| Readout | Prediction on | Prediction off |
+|---|---|---|
+| Round trip | ≈ 140 ms | ≈ 140 ms |
+| Command age | 10 ticks (167 ms) | – |
+| Snapshot age | 6 ticks (100 ms) | – |
+| Predicted ticks / frame | 10 | 0 |
+| Rollbacks / s | ≈ 41 | 0 |
+| Misprediction | 0.000 m walking in open space | "(prediction off)" |
+| Server-position cube | visibly trails the green cube while moving | hidden |
+| Feel | the green cube answers keys immediately | inputs still move the player, one round trip late |
+
+Layout: at both 1600×900 and 1024×768 the player sits in the open band between the HUD panels.
+
+Not verified: the misprediction spike when walking into a bot. Synthetic key events could not steer the
+player into a bot reliably, so this experiment is unconfirmed in the browser.
+
+Known limitation: the Satellite preset (300 ms one way, ≈ 600 ms round trip) exceeds Netcode's default
+`ClientTickRate.MaxPredictAheadTimeMS` (500 ms), so the client cannot run far enough ahead of the server;
+its tick falls behind and prediction stops hiding the latency.
+
 ## Decisions confirmed
 
 - **Stay on Netcode for Entities** (no fallback to Netcode for GameObjects needed).

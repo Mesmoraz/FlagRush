@@ -15,7 +15,7 @@ scene setup and the control panel differ. Nothing below needs a second build or 
 |---|---|---|---|
 | 1 | **Simulator** (live) | server + client worlds in one tab, Burst job, replication, readouts | "modern networking" runs in a browser |
 | 2 | **Sandbox** (live) | live controls: counts, tick rate, latency/jitter/loss, interpolation, pause/kill | you understand *why* the numbers move |
-| 3 | **Player** | you control a predicted ghost with WASD; bots are other ghosts | client-side prediction, inputs, ownership |
+| 3 | **Player** (live) | you control a predicted ghost with WASD; bots are other ghosts | client-side prediction, inputs, ownership |
 | 4 | **Match** | teams, flags, capture rules, scoreboard, XP that survives a disconnect | the game loop; "survive disconnects (like Rust)" |
 | 5 | **Online** | the same client connects to a real dedicated server over WebSocket | 100–150 real players is the same code path |
 | 6 | **Systems** | physical inventory, production machine, vehicle — one small demo each | the remaining posting bullets |
