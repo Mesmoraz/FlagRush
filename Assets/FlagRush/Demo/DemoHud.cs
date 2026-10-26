@@ -96,12 +96,13 @@ namespace FlagRush.Demo
 
             float availW = Screen.width / scale;
             bool sandbox = DemoConfig.Level >= 2;
+            bool player = DemoConfig.IsPlayerLevel;
             float panelW = 360f;
             float leftW = sandbox ? Mathf.Min(1070f, availW - panelW - 36f) : Mathf.Min(1070f, availW - 24f);
             if (sandbox) ControlPanel(availW - panelW - 12f, panelW);
 
             GUILayout.BeginArea(new Rect(12, 12, leftW, 660), _box);
-            GUILayout.Label($"FlagRush  <color=#{Hex(Dim)}>{(sandbox ? "level 2 · sandbox" : "level 1 · networking simulator")}</color>", _title);
+            GUILayout.Label($"FlagRush  <color=#{Hex(Dim)}>{(player ? "level 3 · player" : sandbox ? "level 2 · sandbox" : "level 1 · networking simulator")}</color>", _title);
             GUILayout.Label($"<color=#{Hex(Dim)}>{Application.platform} · {SystemInfo.graphicsDeviceType} · {SystemInfo.processorCount} cores · {(Debug.isDebugBuild ? "development" : "release")} build · up {Time.realtimeSinceStartup:F0}s · server tick {DemoStats.ServerTick}</color>", _label);
             GUILayout.Label($"<color=#{Hex(Dim)}>Two ECS worlds run in this tab: a <b>server</b> (owns the truth) and a <b>client</b> (shows it), joined by an in-process transport that carries the same packets a real socket would.</color>", _meaning, GUILayout.Width(1040));
 
@@ -122,6 +123,16 @@ namespace FlagRush.Demo
             Row(null, "Packet loss", $"{DemoStats.PacketLossPercent:F1}%", "snapshots that never arrived (IPC never drops; real networks do)");
             Row(null, "Tick rate", $"{DemoStats.SimulationTickRate} sim / {DemoStats.NetworkTickRate} net per second", "the server simulates and sends this often; ticks are the unit all timing is measured in");
 
+            if (player)
+            {
+                Section("PLAYER", "does it feel instant at 200 ms?");
+                Row(null, "Command age", $"{DemoStats.CommandAgeTicks} ticks ({DemoStats.CommandAgeMs:F0} ms)", "how long your input takes to be acknowledged by the server");
+                Row(null, "Predicted ticks / frame", $"{DemoStats.PredictedTicksPerFrame}", "how far ahead of the server the client simulates (re-run ticks included)");
+                Row(null, "Rollbacks / s", $"{DemoStats.RollbacksPerSecond:F0}", "how often a new snapshot forced a re-simulation; ~one per snapshot is normal under latency");
+                Row(null, "Misprediction", DemoStats.OwnedPlayerPredicted ? $"{DemoStats.MispredictionMeters:F3} m" : "— (prediction off)", "how wrong the client was about where you are; spikes when you walk into a bot");
+                Row(null, "Players (server / client)", $"{DemoStats.PlayersOnServer} / {DemoStats.PlayersOnClient} ({DemoStats.BotsOnServer} bots)", "you plus the bots, counted on the server and on the client");
+            }
+
             Section("LEVEL", "can baked level data load on the web?");
             Row(subOk, "SubScene entities", $"{DemoStats.SubSceneEntitiesClient} / 3 client · {DemoStats.SubSceneEntitiesServer} / 3 server", "the arena can be authored as a normal Unity scene, baked to entities and streamed in");
 
@@ -129,9 +140,11 @@ namespace FlagRush.Demo
             Row(null, "Draw calls", $"{DemoStats.DrawCalls} for {DemoStats.DrawnInstances} objects", "instanced rendering straight from entity transforms; count barely grows with object count");
 
             GUILayout.Space(8);
-            GUILayout.Label(sandbox
+            GUILayout.Label(player
+                ? $"<color=#{Hex(Dim)}>Click the game, then WASD. Try: 200 ms latency, uncheck Prediction, walk into a bot.  Source: github.com/Mesmoraz/FlagRush</color>"
+                : sandbox
                 ? $"<color=#{Hex(Dim)}>Level 1 shows the readouts; this level lets you cause them. Source: github.com/Mesmoraz/FlagRush</color>"
-                : $"<color=#{Hex(Dim)}>Push it: add <b>?agents=5000&amp;ghosts=200</b> to the URL, or open <b>?level=2</b> for live controls.  Source: github.com/Mesmoraz/FlagRush</color>", _meaning, GUILayout.Width(leftW - 30f));
+                : $"<color=#{Hex(Dim)}>Push it: add <b>?agents=5000&amp;ghosts=200</b> to the URL, open <b>?level=2</b> for live controls, or <b>?level=3</b> to drive a player.  Source: github.com/Mesmoraz/FlagRush</color>", _meaning, GUILayout.Width(leftW - 30f));
             if (!string.IsNullOrEmpty(DemoStats.LastError)) GUILayout.Label($"<color=#{Hex(Fail)}>note: {DemoStats.LastError}</color>", _meaning);
             GUILayout.EndArea();
         }
@@ -163,12 +176,19 @@ namespace FlagRush.Demo
                 _thumb = new GUIStyle(GUI.skin.horizontalSliderThumb);
             }
 
-            GUILayout.BeginArea(new Rect(x, 12, width, 760), _box);
+            GUILayout.BeginArea(new Rect(x, 12, width, DemoConfig.IsPlayerLevel ? 860 : 760), _box);
             GUILayout.Label("SANDBOX  <color=#" + Hex(Dim) + "><i>change a variable, watch the readout move</i></color>", _panelTitle);
             GUILayout.Space(6);
 
             Sandbox.Agents = IntSlider("Agents (client, Burst job)", Sandbox.Agents, 0, Sandbox.MaxAgents, "job time grows linearly; frame time barely moves");
             Sandbox.Ghosts = IntSlider("Replicated objects (server)", Sandbox.Ghosts, 0, Sandbox.MaxGhosts, "bandwidth grows linearly; snapshots get bigger, not more frequent");
+            if (DemoConfig.IsPlayerLevel)
+            {
+                Sandbox.Bots = IntSlider("Bots (server)", Sandbox.Bots, 0, Sandbox.MaxBots, "more grey players to walk into; bandwidth grows with them");
+                Sandbox.PredictionEnabled = GUILayout.Toggle(Sandbox.PredictionEnabled, " Prediction (client-side, for your player)");
+                GUILayout.Label($"<color=#{Hex(Dim)}>expect: off -> your green cube lags your keys by a round trip; the outline (server position) disappears</color>", _hint);
+                GUILayout.Space(4);
+            }
 
             GUILayout.Label($"Network tick rate: <b>{Sandbox.NetworkTickRate}/s</b>", _label);
             GUILayout.BeginHorizontal();

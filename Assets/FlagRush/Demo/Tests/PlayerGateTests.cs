@@ -219,6 +219,47 @@ namespace FlagRush.Demo.Tests
             }
         }
 
+        [UnityTest]
+        public IEnumerator Level3DrawsPlayersAndOutline()
+        {
+            Sandbox.Bots = 5;
+            const int expected = 1 + 5 + 1; // owned + bots + server outline; no agents or probe ghosts at level 3
+            yield return Until(() => DemoStats.PlayersOnClient == 6 && OwnedIsPredicted() && DemoStats.DrawnInstances == expected, 10f);
+            Debug.Log($"[PlayerGate] drawn={DemoStats.DrawnInstances} draws={DemoStats.DrawCalls} players={DemoStats.PlayersOnClient} agents={DemoStats.SwarmCount} ghosts={DemoStats.GhostsOnClient}");
+            Assert.That(DemoStats.DrawnInstances, Is.EqualTo(expected), "owned + 5 bots + outline");
+        }
+
+        [UnityTest]
+        public IEnumerator OutlineHiddenWhenPredictionOff()
+        {
+            Sandbox.Bots = 5;
+            yield return Until(() => DemoStats.PlayersOnClient == 6 && OwnedIsPredicted(), 10f);
+            Sandbox.PredictionEnabled = false;
+            const int expected = 1 + 5; // owned + bots, no outline
+            yield return Until(() => OwnedIsInterpolated() && DemoStats.DrawnInstances == expected, 10f);
+            Debug.Log($"[PlayerGate] prediction off: drawn={DemoStats.DrawnInstances} draws={DemoStats.DrawCalls}");
+            Assert.That(DemoStats.DrawnInstances, Is.EqualTo(expected), "outline must not be drawn with prediction off");
+        }
+
+        [UnityTest]
+        public IEnumerator CameraFollowsOwnedGhost()
+        {
+            yield return Until(OnePlayerEachSide, 10f);
+            Assert.That(OnePlayerEachSide(), Is.True, "no player ghost to follow");
+            yield return new WaitForSeconds(0.5f); // let the camera settle on the ghost
+            var camera = Camera.main;
+            Assert.That(camera, Is.Not.Null, "no main camera");
+            float startX = camera.transform.position.x;
+
+            PlayerInputGatherSystem.TestOverride = new PlayerInput { Move = new float2(1, 0) };
+            yield return new WaitForSeconds(2f);
+            PlayerInputGatherSystem.TestOverride = null;
+
+            float endX = camera.transform.position.x;
+            Debug.Log($"[PlayerGate] camera x {startX:F2} -> {endX:F2}, camera pos {camera.transform.position}");
+            Assert.That(endX - startX, Is.GreaterThan(2f), "camera did not follow the owned ghost");
+        }
+
         static bool OwnedIsPredicted() => OwnedHas(true);
         static bool OwnedIsInterpolated() => OwnedHas(false);
 
