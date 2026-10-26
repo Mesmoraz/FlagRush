@@ -48,6 +48,11 @@ namespace FlagRush.Demo
         public static int PlayersOnClient;        // player ghosts the client has received
         public static Entity OwnedPlayerEntity;   // client: the ghost this client owns (Entity.Null if none)
         public static bool OwnedPlayerPredicted;  // client: the owned ghost is predicted (has PredictedGhost)
+        public static int PredictedTicksPerFrame; // client: PredictedSimulationSystemGroup iterations this frame
+        public static float RollbacksPerSecond;   // client: frames whose first predicted tick re-simulated an already fully predicted tick, per second (1 s window)
+        public static int CommandAgeTicks;        // client: NetworkTime.ServerTick - NetworkSnapshotAck.LastReceivedSnapshotByLocal
+        public static float CommandAgeMs;         // client: CommandAgeTicks at the simulation tick rate
+        public static float MispredictionMeters;  // client: |ServerPosition - predicted position at the last received snapshot tick|; 0 with prediction off
 
         // ---- rendering
         public static int DrawnInstances;

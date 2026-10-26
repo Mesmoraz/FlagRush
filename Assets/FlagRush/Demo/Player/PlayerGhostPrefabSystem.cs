@@ -6,7 +6,7 @@ using UnityEngine;
 namespace FlagRush.Demo
 {
     /// <summary>
-    /// Builds the owner-predicted player ghost prefab in code, identically in the client and server worlds
+    /// Builds the player ghost prefab (predicted by its owner, interpolated elsewhere) in code, identically in the client and server worlds
     /// (same pattern as <see cref="ProbeGhostPrefabSystem"/>). Created at every level so both worlds always
     /// agree on the ghost collection; only <see cref="PlayerSpawnSystem"/> is gated on the level.
     /// </summary>
@@ -35,7 +35,9 @@ namespace FlagRush.Demo
                 Name = "PlayerGhost",
                 Importance = 2000,
                 SupportedGhostModes = GhostModeMask.All,
-                DefaultGhostMode = GhostMode.OwnerPredicted,
+                // Not OwnerPredicted: Netcode cannot prediction-switch OwnerPredicted ghosts on demand. The owner's
+                // client spawns its own ghost predicted (PlayerSpawnClassificationSystem); everyone else interpolates.
+                DefaultGhostMode = GhostMode.Interpolated,
                 OptimizationMode = GhostOptimizationMode.Dynamic,
             });
 

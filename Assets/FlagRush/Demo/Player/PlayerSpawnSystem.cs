@@ -21,7 +21,7 @@ namespace FlagRush.Demo
     }
 
     /// <summary>
-    /// Server: gives every in-game connection one owner-predicted player ghost. The ghost is the
+    /// Server: gives every in-game connection one player ghost (predicted by its owner, see PlayerSpawnClassificationSystem). The ghost is the
     /// connection's <see cref="CommandTarget"/> and lives in its <see cref="LinkedEntityGroup"/>, so a
     /// disconnect destroys it. Below Level 3 any leftover players are despawned (the worlds outlive
     /// PlayMode tests, and Level 1-2 must not see extra ghosts).

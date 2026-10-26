@@ -3,6 +3,7 @@ using NUnit.Framework;
 using Unity.Entities;
 using Unity.Mathematics;
 using Unity.NetCode;
+using Unity.Transforms;
 using UnityEngine;
 using UnityEngine.SceneManagement;
 using UnityEngine.TestTools;
@@ -29,6 +30,7 @@ namespace FlagRush.Demo.Tests
             PlayerInputGatherSystem.TestOverride = null;
             Sandbox.Bots = 0;
             Sandbox.SetLink(0, 0, 0);
+            Sandbox.PredictionEnabled = true;
             // Let the server despawn the level-3 players before the next test runs.
             yield return Until(() => DemoStats.PlayersOnServer == 0 && DemoStats.PlayersOnClient == 0, 10f);
             Assert.That(DemoStats.PlayersOnServer, Is.EqualTo(0), "players not despawned on the server below Level 3");
@@ -132,6 +134,100 @@ namespace FlagRush.Demo.Tests
             Debug.Log($"[PlayerGate] bot position sum {start} -> {end} over {DemoStats.ServerTick - startTick} ticks");
             Assert.That(DemoStats.ServerTick - startTick, Is.GreaterThanOrEqualTo(60u), "server did not tick 60 times");
             Assert.That(math.distance(start, end), Is.GreaterThan(0.5f), "bots did not move");
+        }
+
+        [UnityTest]
+        public IEnumerator PredictionLeadsServerUnderLatency()
+        {
+            yield return Until(OnePlayerEachSide, 10f);
+            Assert.That(OnePlayerEachSide(), Is.True, "no player ghost");
+            Sandbox.SetLink(100, 0, 0);
+            yield return Until(() => DemoStats.EstimatedRttMs > 150f, 20f);
+            Assert.That(DemoStats.EstimatedRttMs, Is.GreaterThan(150f), "link emulation did not raise RTT");
+            yield return Until(OwnedIsPredicted, 3f);
+            Assert.That(OwnedIsPredicted(), Is.True, "owned ghost is not predicted");
+
+            var em = ClientWorld().EntityManager;
+            var owned = DemoStats.OwnedPlayerEntity;
+            float localStart = em.GetComponentData<LocalTransform>(owned).Position.x;
+            float serverStart = em.GetComponentData<ServerPosition>(owned).Value.x;
+
+            PlayerInputGatherSystem.TestOverride = new PlayerInput { Move = new float2(1, 0) };
+            float local = localStart, server = serverStart;
+            for (int frame = 0; frame < 2 && local <= localStart; frame++)
+            {
+                yield return null;
+                local = em.GetComponentData<LocalTransform>(owned).Position.x;
+                server = em.GetComponentData<ServerPosition>(owned).Value.x;
+            }
+            Debug.Log($"[PlayerGate] local x {localStart:F5} -> {local:F5}, server x {serverStart:F5} -> {server:F5}, " +
+                      $"rtt {DemoStats.EstimatedRttMs:F0} ms, command age {DemoStats.CommandAgeTicks} ticks ({DemoStats.CommandAgeMs:F0} ms), " +
+                      $"ticks/frame {DemoStats.PredictedTicksPerFrame}, rollbacks/s {DemoStats.RollbacksPerSecond:F1}, misprediction {DemoStats.MispredictionMeters:F3} m");
+            Assert.That(local, Is.GreaterThan(localStart), "prediction did not move the owned ghost within 2 frames");
+            Assert.That(server, Is.EqualTo(serverStart), "server position changed before the input could reach the server");
+            Assert.That(DemoStats.CommandAgeTicks, Is.GreaterThanOrEqualTo(6), "command age under 100 ms one-way latency");
+        }
+
+        [UnityTest]
+        public IEnumerator TogglingPredictionSwitchesGhostMode()
+        {
+            yield return Until(OwnedIsPredicted, 10f);
+            Assert.That(OwnedIsPredicted(), Is.True, "owned ghost not predicted at start");
+
+            Sandbox.PredictionEnabled = false;
+            yield return Until(OwnedIsInterpolated, 3f);
+            Assert.That(OwnedIsInterpolated(), Is.True, "owned ghost still predicted 3 s after turning prediction off");
+            yield return null;
+            Assert.That(DemoStats.OwnedPlayerPredicted, Is.False, "OwnedPlayerPredicted readout");
+            Assert.That(DemoStats.MispredictionMeters, Is.EqualTo(0f), "misprediction must read 0 with prediction off");
+
+            // Inputs keep flowing while interpolated: the server still moves the ghost.
+            float startX = ServerPlayerPosition().x;
+            uint startTick = DemoStats.ServerTick;
+            float deadline = Time.realtimeSinceStartup + 5f;
+            PlayerInputGatherSystem.TestOverride = new PlayerInput { Move = new float2(1, 0) };
+            while (DemoStats.ServerTick - startTick < 30 && Time.realtimeSinceStartup < deadline)
+                yield return null;
+            PlayerInputGatherSystem.TestOverride = null;
+            Assert.That(ServerPlayerPosition().x - startX, Is.GreaterThan(0.5f), "input did not reach the server while interpolated");
+            Assert.That(OwnedIsInterpolated(), Is.True, "owned ghost left interpolated mode while prediction is off");
+
+            Sandbox.PredictionEnabled = true;
+            yield return Until(OwnedIsPredicted, 3f);
+            Assert.That(OwnedIsPredicted(), Is.True, "owned ghost still interpolated 3 s after turning prediction on");
+        }
+
+        [UnityTest]
+        public IEnumerator RapidToggleConvergesToCheckbox()
+        {
+            yield return Until(OwnedIsPredicted, 10f);
+            Assert.That(OwnedIsPredicted(), Is.True, "owned ghost not predicted at start");
+
+            Sandbox.PredictionEnabled = false;
+            yield return null;
+            Sandbox.PredictionEnabled = true;
+            yield return null;
+            Sandbox.PredictionEnabled = false;
+
+            yield return Until(OwnedIsInterpolated, 3f);
+            Assert.That(OwnedIsInterpolated(), Is.True, "owned ghost did not converge to interpolated within 3 s");
+            float until = Time.realtimeSinceStartup + 1f;
+            while (Time.realtimeSinceStartup < until)
+            {
+                Assert.That(OwnedIsInterpolated(), Is.True, "owned ghost left interpolated mode after converging");
+                yield return null;
+            }
+        }
+
+        static bool OwnedIsPredicted() => OwnedHas(true);
+        static bool OwnedIsInterpolated() => OwnedHas(false);
+
+        static bool OwnedHas(bool predicted)
+        {
+            var world = ClientWorld();
+            var owned = DemoStats.OwnedPlayerEntity;
+            if (world == null || owned == Entity.Null || !world.EntityManager.Exists(owned)) return false;
+            return world.EntityManager.HasComponent<PredictedGhost>(owned) == predicted;
         }
 
         static float3 SumBotServerPositions()
