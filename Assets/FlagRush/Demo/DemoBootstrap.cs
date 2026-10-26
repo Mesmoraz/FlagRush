@@ -55,7 +55,10 @@ namespace FlagRush.Demo
             instance.unreliablePipeline = instance.driver.CreatePipeline(typeof(UnreliableSequencedPipelineStage), typeof(SimulatorPipelineStage));
             instance.reliablePipeline = instance.driver.CreatePipeline(typeof(ReliableSequencedPipelineStage), typeof(SimulatorPipelineStage));
             instance.unreliableFragmentedPipeline = instance.driver.CreatePipeline(typeof(FragmentationPipelineStage), typeof(SimulatorPipelineStage));
-            driver.RegisterDriver(TransportType.IPC, instance);
+            // Registered as Socket, not IPC: for an IPC client Netcode assumes a one-tick round trip and steers the
+            // prediction lead from command-age feedback alone, which snaps back once the simulated latency is past
+            // ~10 ticks (the Satellite preset). As Socket it uses the measured RTT, which includes the simulator delay.
+            driver.RegisterDriver(TransportType.Socket, instance);
             Sandbox.LinkVersionApplied = Sandbox.LinkVersion;
         }
 

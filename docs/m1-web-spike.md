@@ -47,9 +47,14 @@ Layout: at both 1600×900 and 1024×768 the player sits in the open band between
 Not verified: the misprediction spike when walking into a bot. Synthetic key events could not steer the
 player into a bot reliably, so this experiment is unconfirmed in the browser.
 
-Known limitation: the Satellite preset (300 ms one way, ≈ 600 ms round trip) exceeds Netcode's default
-`ClientTickRate.MaxPredictAheadTimeMS` (500 ms), so the client cannot run far enough ahead of the server;
-its tick falls behind and prediction stops hiding the latency.
+Satellite preset (300 ms one way, ≈ 600 ms round trip): the first Level 3 build fell behind the server
+here. The cause was the transport type, not the predict-ahead cap: registered as IPC, the client driver
+makes Netcode assume a one-tick round trip and steer the prediction lead from command-age feedback alone,
+which snaps back once the error passes 10 ticks. The client driver is now registered as `Socket`, so
+Netcode uses the measured RTT (simulator delay included). Above `ClientTickRate.MaxPredictAheadTimeMS`
+(500 ms, also Netcode's hard maximum) the client still predicts 500 ms ahead and the rest becomes input
+delay. The PlayMode gate `PredictionStaysAheadAtSatelliteLatency` measures a 605 ms RTT with the client
+12 ticks ahead of the server.
 
 ## Decisions confirmed
 

@@ -183,7 +183,7 @@ Press *Freeze server* instead: the cubes stop (no new state), *Snapshot age* cli
 | Control | What it changes | Where |
 |---|---|---|
 | Agents / Replicated objects | spawn or destroy entities until the world matches the slider (bounded per frame) | client `SwarmSystem` / server `ProbeServerSystem` |
-| Latency / jitter / loss | a **simulator pipeline stage** in the client's transport driver delays, jitters or drops packets in both directions; changed live with `ModifySimulatorStageParameters` | `IpcOnlyDriverConstructor`, `SandboxClientSystem` |
+| Latency / jitter / loss | a **simulator pipeline stage** in the client's transport driver delays, jitters or drops packets in both directions; changed live with `ModifySimulatorStageParameters`. The client driver is registered as `Socket` so Netcode times prediction from the measured round trip; past 500 ms of round trip it adds input delay instead of predicting further | `IpcOnlyDriverConstructor`, `SandboxClientSystem` |
 | Network tick rate | `ClientServerTickRate.NetworkTickRate` on the server; because the client learns tick rates during the handshake, the change forces a reconnect | `SandboxServerSystem` |
 | Interpolation delay | `ClientTickRate.InterpolationTimeMS` on the client (0 = netcode's own default) | `SandboxClientSystem` |
 | Freeze server | disables the server world's `SimulationSystemGroup` — nothing ticks, nothing is sent | `DemoHud.SetServerFrozen` |

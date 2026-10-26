@@ -178,6 +178,31 @@ namespace FlagRush.Demo.Tests
         }
 
         [UnityTest]
+        public IEnumerator PredictionStaysAheadAtSatelliteLatency()
+        {
+            yield return Until(OnePlayerEachSide, 10f);
+            Assert.That(OnePlayerEachSide(), Is.True, "no player ghost");
+            // Satellite preset without jitter/loss (300 ms each way, ~600 ms RTT): past Netcode's 500 ms predict-ahead
+            // cap, so the client should run ahead of the server with some input delay, never behind it.
+            Sandbox.SetLink(300, 0, 0);
+            yield return Until(() => DemoStats.EstimatedRttMs > 550f, 20f);
+            Assert.That(DemoStats.EstimatedRttMs, Is.GreaterThan(550f), "link emulation did not raise RTT");
+            float settle = Time.realtimeSinceStartup + 3f;
+            while (Time.realtimeSinceStartup < settle)
+                yield return null;
+
+            int minLead = int.MaxValue;
+            float until = Time.realtimeSinceStartup + 1f;
+            while (Time.realtimeSinceStartup < until)
+            {
+                minLead = math.min(minLead, (int)(DemoStats.ClientServerTick - DemoStats.ServerTick));
+                yield return null;
+            }
+            Debug.Log($"[PlayerGate] satellite: rtt {DemoStats.EstimatedRttMs:F0} ms, min client lead {minLead} ticks, command age {DemoStats.CommandAgeTicks}");
+            Assert.That(minLead, Is.GreaterThan(0), "client predicted tick is not ahead of the server at ~600 ms RTT");
+        }
+
+        [UnityTest]
         public IEnumerator TogglingPredictionSwitchesGhostMode()
         {
             yield return Until(OwnedIsPredicted, 10f);
