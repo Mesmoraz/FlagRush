@@ -26,6 +26,7 @@ namespace FlagRush.Demo.Tests
         public IEnumerator TearDown()
         {
             DemoConfig.OverrideLevel(null);
+            PlayerInputGatherSystem.TestOverride = null;
             Sandbox.SetLink(0, 0, 0);
             // Let the server despawn the level-3 players before the next test runs.
             yield return Until(() => DemoStats.PlayersOnServer == 0 && DemoStats.PlayersOnClient == 0, 10f);
@@ -58,14 +59,10 @@ namespace FlagRush.Demo.Tests
             float startX = ServerPlayerPosition().x;
             uint startTick = DemoStats.ServerTick;
             float deadline = Time.realtimeSinceStartup + 10f;
+            PlayerInputGatherSystem.TestOverride = new PlayerInput { Move = new float2(1, 0) };
             while (DemoStats.ServerTick - startTick < 60 && Time.realtimeSinceStartup < deadline)
-            {
-                var em = ClientWorld().EntityManager;
-                var owned = DemoStats.OwnedPlayerEntity;
-                if (owned != Entity.Null && em.Exists(owned))
-                    em.SetComponentData(owned, new PlayerInput { Move = new float2(1, 0) });
                 yield return null;
-            }
+            PlayerInputGatherSystem.TestOverride = null;
 
             float endX = ServerPlayerPosition().x;
             Debug.Log($"[PlayerGate] server x {startX:F2} -> {endX:F2} over {DemoStats.ServerTick - startTick} ticks");
