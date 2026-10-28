@@ -62,6 +62,16 @@ namespace FlagRush.Demo
         public static int RedPlayersOnServer;     // server players with Combatant.Team == 0
         public static int BluePlayersOnServer;    // server players with Combatant.Team == 1
         public static float ShotsPerSecond;       // server: shots resolved per second across all players (1 s window)
+        public static float FireConfirmMs;        // client: ms from the latest fire press to the snapshot whose ShotsFired includes it (0 = no sample yet)
+        public static short MatchRedScore;        // client: match-state ghost scores
+        public static short MatchBlueScore;
+        public static bool MatchEnded;            // client: match phase is Ended
+        public static uint MatchTicksLeft;        // client: round ticks left (0 once ended)
+        public static short YouKills;             // client: owned player's MatchStats
+        public static short YouDeaths;
+        public static short YouCaptures;
+        public static string RedFlagLine = "";    // client: MatchHudText.FlagLine for each flag
+        public static string BlueFlagLine = "";
         public static readonly MatchEventRing LastMatchEvents = new MatchEventRing(16); // server: the newest match events
 
         // ---- rendering

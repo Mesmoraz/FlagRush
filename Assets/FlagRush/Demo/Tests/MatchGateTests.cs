@@ -234,6 +234,18 @@ namespace FlagRush.Demo.Tests
             Assert.That(math.distance(before, after), Is.LessThanOrEqualTo(1e-3f), "dead player moved on the server");
         }
 
+        [UnityTest]
+        public IEnumerator MatchRenderDrawsArena()
+        {
+            Sandbox.Bots = 5;
+            yield return Until(() => DemoStats.PlayersOnClient == 6 && DemoStats.FlagsOnClient == 2 && OwnedReady(), 10f);
+            // 6 players + 1 ring + 8 boxes + 2 bases + 2 flags (+1 server outline while prediction is on)
+            int expected = 6 + 1 + 8 + 2 + 2 + (Sandbox.PredictionEnabled ? 1 : 0);
+            yield return Until(() => DemoStats.DrawnInstances == expected, 10f);
+            Debug.Log($"[MatchGate] drawn {DemoStats.DrawnInstances} instances in {DemoStats.DrawCalls} calls (expected {expected})");
+            Assert.That(DemoStats.DrawnInstances, Is.EqualTo(expected), "drawn instances at level 4");
+        }
+
         /// <summary>Server teleport: the same four components a respawn writes.</summary>
         static void Teleport(EntityManager em, Entity player, float3 at)
         {
