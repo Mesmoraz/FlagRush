@@ -44,5 +44,18 @@ namespace FlagRush.Demo.Tests
             Assert.That(MatchHudText.IsHitFlash(99, 100), Is.False, "a hit in the future is not a flash");
             Assert.That(MatchHudText.IsHitFlash(3, uint.MaxValue - 2), Is.True, "wraps");
         }
+
+        [Test]
+        public void OwnedHitLatchFlashesFor150ms()
+        {
+            var latch = new MatchHudText.HitLatch();
+            Assert.That(MatchHudText.OwnedHitFlash(ref latch, 0, 1f), Is.False, "0 never flashes");
+            Assert.That(MatchHudText.OwnedHitFlash(ref latch, 500, 10f), Is.True, "new hit starts the flash");
+            Assert.That(MatchHudText.OwnedHitFlash(ref latch, 500, 10.1f), Is.True);
+            Assert.That(MatchHudText.OwnedHitFlash(ref latch, 500, 10.16f), Is.False, "expires after 0.15 s");
+            Assert.That(MatchHudText.OwnedHitFlash(ref latch, 500, 10.2f), Is.False, "same value does not restart");
+            Assert.That(MatchHudText.OwnedHitFlash(ref latch, 520, 10.3f), Is.True, "a newer hit restarts");
+            Assert.That(MatchHudText.OwnedHitFlash(ref latch, 0, 10.31f), Is.False, "reset clears");
+        }
     }
 }

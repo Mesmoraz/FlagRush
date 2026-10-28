@@ -66,6 +66,7 @@ namespace FlagRush.Demo
         uint _lastTracerTick;
         float _tracerUntil;
         InstanceData _tracer;
+        MatchHudText.HitLatch _ownedHit;
 
         protected override void OnCreate()
         {
@@ -213,7 +214,8 @@ namespace FlagRush.Demo
                 {
                     if (!combatants[i].Alive) continue;
                     float3 pos = transforms[i].Position;
-                    AddPlayer(combatants[i], pos, ownedTick, red, blue, white);
+                    bool flash = MatchHudText.OwnedHitFlash(ref _ownedHit, combatants[i].LastHitTick, UnityEngine.Time.realtimeSinceStartup);
+                    AddPlayer(combatants[i], pos, flash, red, blue, white);
                     white.Add(Instance(new Vector3(pos.x, 0.02f, pos.z), RingScale));
                     UpdateTracer(inputs[i], pos, ownedTick, layout);
                 }
@@ -225,7 +227,7 @@ namespace FlagRush.Demo
             using (var combatants = _matchOtherQuery.ToComponentDataArray<Combatant>(Allocator.Temp))
             {
                 for (int i = 0; i < transforms.Length; i++)
-                    if (combatants[i].Alive) AddPlayer(combatants[i], transforms[i].Position, interpTick, red, blue, white);
+                    if (combatants[i].Alive) AddPlayer(combatants[i], transforms[i].Position, MatchHudText.IsHitFlash(interpTick, combatants[i].LastHitTick), red, blue, white);
             }
 
             using (var flags = _flagQuery.ToComponentDataArray<FlagGhost>(Allocator.Temp))
@@ -257,10 +259,10 @@ namespace FlagRush.Demo
             return count;
         }
 
-        static void AddPlayer(in Combatant c, float3 pos, uint now, NativeList<InstanceData> red, NativeList<InstanceData> blue, NativeList<InstanceData> white)
+        static void AddPlayer(in Combatant c, float3 pos, bool flash, NativeList<InstanceData> red, NativeList<InstanceData> blue, NativeList<InstanceData> white)
         {
             var instance = PlayerInstance(pos);
-            if (MatchHudText.IsHitFlash(now, c.LastHitTick)) white.Add(instance);
+            if (flash) white.Add(instance);
             else if (c.Team == 0) red.Add(instance);
             else blue.Add(instance);
         }
@@ -298,12 +300,19 @@ namespace FlagRush.Demo
         int DrawOutline()
         {
             var positions = _ownedQuery.ToComponentDataArray<ServerPosition>(Allocator.Temp);
-            var instances = new NativeArray<InstanceData>(positions.Length, Allocator.Temp);
+            var entities = _ownedQuery.ToEntityArray(Allocator.Temp);
+            var instances = new NativeList<InstanceData>(positions.Length, Allocator.Temp);
+            bool match = DemoConfig.IsMatchLevel;
             for (int i = 0; i < positions.Length; i++)
-                instances[i] = PlayerInstance(positions[i].Value);
-            Submit(instances, _outlineMaterial);
+            {
+                // Level 4: a dead owned player is not drawn, and neither is its server outline.
+                if (match && EntityManager.HasComponent<Combatant>(entities[i]) && !EntityManager.GetComponentData<Combatant>(entities[i]).Alive) continue;
+                instances.Add(PlayerInstance(positions[i].Value));
+            }
+            Submit(instances.AsArray(), _outlineMaterial);
             int count = instances.Length;
             positions.Dispose();
+            entities.Dispose();
             instances.Dispose();
             return count;
         }

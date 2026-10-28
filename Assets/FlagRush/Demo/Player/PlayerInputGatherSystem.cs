@@ -79,8 +79,8 @@ namespace FlagRush.Demo
             if (mouse != null)
             {
                 Vector2 pos = mouse.position.ReadValue();
-                // A click on the sandbox control panel (right edge) adjusts a slider; it is not a shot.
-                if (pos.x < DemoHud.ControlPanelLeft)
+                // A click on either HUD panel (sliders, hide button) is not a shot.
+                if (!DemoHud.IsOverPanel(pos))
                 {
                     fire |= mouse.leftButton.isPressed;
                     if (math.all(aim == float2.zero) && cam != null)

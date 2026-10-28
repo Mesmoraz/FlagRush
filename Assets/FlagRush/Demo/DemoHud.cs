@@ -207,7 +207,20 @@ namespace FlagRush.Demo
 
         // ---------------------------------------------------------------- Level 3: compact panel
 
-        float _compactHeight = 560f; // measured from the laid-out content on each repaint
+        static float _compactHeightRef = 560f; // measured from the laid-out content on each repaint
+        float _compactHeight { get => _compactHeightRef; set => _compactHeightRef = value; }
+
+        /// <summary>True when a screen-pixel point (origin bottom-left, as the mouse reports it) is over the left readout panel (its hide button included) or the control panel.</summary>
+        public static bool IsOverPanel(Vector2 screenPos)
+        {
+            float scale = Scale;
+            if (scale <= 0f) return false;
+            if (DemoConfig.Level >= 2 && screenPos.x >= ControlPanelLeft) return true;
+            if (!DemoConfig.IsPlayerLevel) return false;
+            float x = screenPos.x / scale, y = (Screen.height - screenPos.y) / scale;
+            float w = LeftWidthRef(Screen.width / scale), h = Collapsed ? 46f : _compactHeightRef;
+            return x >= Margin && x <= Margin + w && y >= Margin && y <= Margin + h;
+        }
 
         void CompactRow(bool? pass, string label, string value, float width)
         {

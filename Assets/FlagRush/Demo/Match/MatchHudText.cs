@@ -30,6 +30,31 @@ namespace FlagRush.Demo
             }
         }
 
+        public const float OwnedFlashSeconds = 0.15f;
+
+        /// <summary>Latch state for the owned player's hit flash (real time, not ticks).</summary>
+        public struct HitLatch
+        {
+            public uint Seen;
+            public float Until;
+        }
+
+        /// <summary>
+        /// Owned player's flash: the predicted tick runs a round trip ahead of the snapshot that carries LastHitTick, so a
+        /// tick window would be missed. A new non-zero LastHitTick starts a 0.15 s real-time flash; the same value does not
+        /// restart it; 0 never flashes.
+        /// </summary>
+        public static bool OwnedHitFlash(ref HitLatch latch, uint lastHit, float now)
+        {
+            if (lastHit == 0) { latch.Seen = 0; return false; }
+            if (lastHit != latch.Seen)
+            {
+                latch.Seen = lastHit;
+                latch.Until = now + OwnedFlashSeconds;
+            }
+            return now < latch.Until;
+        }
+
         /// <summary>Hit flash window: 0 ≤ (now − lastHit) ≤ HitFlashTicks, wrap-safe; lastHit 0 means never hit.</summary>
         public static bool IsHitFlash(uint now, uint lastHit)
             => lastHit != 0 && now - lastHit <= MatchTuning.HitFlashTicks;
