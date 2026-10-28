@@ -109,19 +109,28 @@ namespace FlagRush.Demo
             float2 goal = target;
             if (Obstacles.SegmentHit(position, target, layout, out _, out int box))
             {
+                // Waypoint = the blocking box's corner (pushed out along its diagonal) on the shortest path
+                // position -> corner -> target that the bot can actually walk to. Corners it already stands at
+                // (within 0.5 m) are skipped, so it moves on to the next corner instead of orbiting one.
                 var b = layout.Boxes[box];
                 float2 best = default;
-                float bestDistance = float.MaxValue;
+                float bestCost = float.MaxValue;
+                float2 fallback = default;
+                float fallbackDistance = float.MaxValue;
                 for (int c = 0; c < 4; c++)
                 {
                     float2 sign = new float2((c & 1) == 0 ? -1f : 1f, (c & 2) == 0 ? -1f : 1f);
-                    float2 corner = b.Center + b.HalfExtents * sign;
-                    float d = math.distance(position, corner);
-                    if (d >= bestDistance) continue;
-                    bestDistance = d;
-                    best = corner + math.normalize(sign) * MatchTuning.BotCornerMargin;
+                    float2 waypoint = b.Center + b.HalfExtents * sign + math.normalize(sign) * MatchTuning.BotCornerMargin;
+                    float toWaypoint = math.distance(position, waypoint);
+                    if (toWaypoint < fallbackDistance) { fallbackDistance = toWaypoint; fallback = waypoint; }
+                    if (toWaypoint < 0.5f) continue;
+                    if (Obstacles.SegmentHit(position, waypoint, layout, out _, out _)) continue;
+                    float cost = toWaypoint + math.distance(waypoint, target);
+                    if (cost >= bestCost) continue;
+                    bestCost = cost;
+                    best = waypoint;
                 }
-                goal = best;
+                goal = bestCost < float.MaxValue ? best : fallback;
             }
             float2 to = goal - position;
             float length = math.length(to);

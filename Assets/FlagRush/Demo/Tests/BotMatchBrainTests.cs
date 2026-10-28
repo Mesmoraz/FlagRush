@@ -19,9 +19,8 @@ namespace FlagRush.Demo.Tests
         {
             var self = View(1, new float2(-5f, 3f), 0);
             var enemy = new FlagData { Team = 1, State = FlagState.Carried, CarrierId = 1, Position = self.Position };
-            var players = new NativeArray<PlayerView>(new[] { self }, Allocator.Temp);
+            using var players = new NativeArray<PlayerView>(new[] { self }, Allocator.Temp);
             var state = BotBrain.ChooseState(1, self, Home(0, Empty), enemy, players, Empty, out float2 target);
-            players.Dispose();
             Assert.That(state, Is.EqualTo(BotMatchState.Return));
             Assert.That(target, Is.EqualTo(Empty.RedBase));
         }
@@ -31,9 +30,8 @@ namespace FlagRush.Demo.Tests
         {
             var self = View(1, new float2(-5f, 3f), 0);
             var own = new FlagData { Team = 0, State = FlagState.Carried, CarrierId = 9, Position = new float2(5f, 5f) };
-            var players = new NativeArray<PlayerView>(new[] { self, View(9, new float2(5f, 5f), 1) }, Allocator.Temp);
+            using var players = new NativeArray<PlayerView>(new[] { self, View(9, new float2(5f, 5f), 1) }, Allocator.Temp);
             var state = BotBrain.ChooseState(1, self, own, Home(1, Empty), players, Empty, out float2 target);
-            players.Dispose();
             Assert.That(state, Is.EqualTo(BotMatchState.Hunt));
             Assert.That(target, Is.EqualTo(new float2(5f, 5f)));
         }
@@ -43,9 +41,8 @@ namespace FlagRush.Demo.Tests
         {
             var self = View(1, new float2(-20f, 3f), 0);
             var enemy = Home(1, Empty);
-            var players = new NativeArray<PlayerView>(new[] { self }, Allocator.Temp);
+            using var players = new NativeArray<PlayerView>(new[] { self }, Allocator.Temp);
             var state = BotBrain.ChooseState(1, self, Home(0, Empty), enemy, players, Empty, out float2 target);
-            players.Dispose();
             Assert.That(state, Is.EqualTo(BotMatchState.GoForFlag));
             Assert.That(target, Is.EqualTo(enemy.Position));
         }
@@ -54,14 +51,13 @@ namespace FlagRush.Demo.Tests
         public void DefenderHoldsNearStand()
         {
             var self = View(1, Empty.RedBase + new float2(3f, 0f), 0);
-            var players = new NativeArray<PlayerView>(new[] { self }, Allocator.Temp);
+            using var players = new NativeArray<PlayerView>(new[] { self }, Allocator.Temp);
             var state = BotBrain.ChooseState(0, self, Home(0, Empty), Home(1, Empty), players, Empty, out float2 target);
             Assert.That(state, Is.EqualTo(BotMatchState.Hold));
             Assert.That(target, Is.EqualTo(self.Position));
 
             var s = BotBrainState.Create(0);
             var input = BotBrain.ThinkMatch(ref s, 0, self, Home(0, Empty), Home(1, Empty), players, Empty);
-            players.Dispose();
             Assert.That(input.Move, Is.EqualTo(float2.zero));
         }
 
@@ -71,9 +67,8 @@ namespace FlagRush.Demo.Tests
             var self = View(1, Empty.RedBase, 0);
             var intruder = View(2, new float2(-10f, 4f), 1);
             var farEnemy = View(3, new float2(10f, 0f), 1);
-            var players = new NativeArray<PlayerView>(new[] { self, farEnemy, intruder }, Allocator.Temp);
+            using var players = new NativeArray<PlayerView>(new[] { self, farEnemy, intruder }, Allocator.Temp);
             var state = BotBrain.ChooseState(0, self, Home(0, Empty), Home(1, Empty), players, Empty, out float2 target);
-            players.Dispose();
             Assert.That(state, Is.EqualTo(BotMatchState.Hunt));
             Assert.That(target, Is.EqualTo(intruder.Position));
         }
@@ -97,7 +92,7 @@ namespace FlagRush.Demo.Tests
         {
             var self = View(1, new float2(-20f, 3f), 0);
             var enemy = View(2, new float2(-10f, 3f), 1);
-            var players = new NativeArray<PlayerView>(new[] { self, enemy }, Allocator.Temp);
+            using var players = new NativeArray<PlayerView>(new[] { self, enemy }, Allocator.Temp);
             var s = BotBrainState.Create(1);
             for (int i = 0; i < 50; i++)
             {
@@ -107,7 +102,6 @@ namespace FlagRush.Demo.Tests
                 float angle = math.degrees(math.acos(math.clamp(math.dot(input.Aim, new float2(1f, 0f)), -1f, 1f)));
                 Assert.That(angle, Is.LessThanOrEqualTo(MatchTuning.BotAimErrorDegrees + 1e-3f));
             }
-            players.Dispose();
         }
 
         [Test]
@@ -115,10 +109,9 @@ namespace FlagRush.Demo.Tests
         {
             var self = View(1, new float2(-20f, 0f), 0);
             var enemy = View(2, new float2(-5f, 0f), 1); // box (-12,0) between
-            var players = new NativeArray<PlayerView>(new[] { self, enemy }, Allocator.Temp);
+            using var players = new NativeArray<PlayerView>(new[] { self, enemy }, Allocator.Temp);
             var s = BotBrainState.Create(1);
             var input = BotBrain.ThinkMatch(ref s, 1, self, Home(0, Layout), Home(1, Layout), players, Layout);
-            players.Dispose();
             Assert.That(input.Fire, Is.False);
             Assert.That(input.Aim, Is.EqualTo(float2.zero));
         }
@@ -128,12 +121,29 @@ namespace FlagRush.Demo.Tests
         {
             var self = View(1, new float2(15f, 0f), 0);
             var enemy = new FlagData { Team = 1, State = FlagState.Carried, CarrierId = 1, Position = self.Position };
-            var players = new NativeArray<PlayerView>(new[] { self }, Allocator.Temp);
+            using var players = new NativeArray<PlayerView>(new[] { self }, Allocator.Temp);
             var s = BotBrainState.Create(1);
             var input = BotBrain.ThinkMatch(ref s, 1, self, Home(0, Empty), enemy, players, Empty);
-            players.Dispose();
             Assert.That(math.distance(self.Position, Empty.RedBase), Is.GreaterThan(15f));
             Assert.That(input.Sprint, Is.False);
+        }
+
+        [TestCase(-20f, 0f)]
+        [TestCase(-13.5f, -5.5f)]
+        [TestCase(-13.5f, 5.5f)]
+        [TestCase(-9.5f, 0f)]
+        public void ReachesTargetAroundBox(float x, float y)
+        {
+            float2 pos = new float2(x, y), target = float2.zero;
+            float2 velocity = float2.zero;
+            for (int i = 0; i < 600 && math.distance(pos, target) > 0.5f; i++)
+            {
+                float2 dir = BotBrain.SteerToward(pos, target, Layout);
+                var p3 = new float3(pos.x, 0f, pos.y) + new float3(dir.x, 0f, dir.y) * 0.1f;
+                Obstacles.Slide(ref p3, ref velocity, 0.6f, Layout);
+                pos = p3.xz;
+            }
+            Assert.That(math.distance(pos, target), Is.LessThanOrEqualTo(0.5f), $"stuck at {pos}");
         }
     }
 }
