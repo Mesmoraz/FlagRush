@@ -103,8 +103,32 @@ namespace FlagRush.Demo.Tests
                 var s = ArenaLayout.SpawnPoint(team, i);
                 float sign = team == 0 ? -1f : 1f;
                 Assert.That(s.x * sign, Is.InRange(26f, 29f), $"team {team} slot {i}");
-                Assert.That(s.z, Is.InRange(-20f, 20f));
+                Assert.That(math.abs(s.z), Is.InRange(12f, 20f), $"team {team} slot {i} not in a flank strip");
+                Assert.That(s.y, Is.EqualTo(0f));
                 Assert.IsFalse(Inside(s.xz, l));
+            }
+        }
+
+        [Test]
+        public void SpawnSlotsAreOffTheFlagStandAndSplitBetweenBothFlanks()
+        {
+            var l = ArenaLayout.Match;
+            for (byte team = 0; team < 2; team++)
+            {
+                int plus = 0, minus = 0;
+                float2 stand = l.Base(team);
+                for (int i = 0; i < ArenaLayout.SpawnSlots; i++)
+                {
+                    var s = ArenaLayout.SpawnPoint(team, i);
+                    Assert.That(math.abs(s.z), Is.GreaterThanOrEqualTo(12f), $"team {team} slot {i} in front of the stand");
+                    Assert.That(math.distance(s.xz, stand), Is.GreaterThan(12f), $"team {team} slot {i}");
+                    Assert.That(s, Is.EqualTo(ArenaLayout.SpawnPoint(team, i + ArenaLayout.SpawnSlots)), "slots wrap mod 80");
+                    if (s.z > 0f) plus++; else minus++;
+                    for (int j = i + 1; j < ArenaLayout.SpawnSlots; j++)
+                        Assert.That(math.distance(s.xz, ArenaLayout.SpawnPoint(team, j).xz), Is.GreaterThan(0.1f), $"slots {i} and {j} coincide");
+                }
+                Assert.That(plus, Is.EqualTo(40));
+                Assert.That(minus, Is.EqualTo(40));
             }
         }
     }

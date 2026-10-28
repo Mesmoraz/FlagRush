@@ -44,7 +44,7 @@ footprints that block everything (they are taller than players).
 | Red base / flag stand | centre (−25, 0), base radius 3 m |
 | Blue base / flag stand | centre (+25, 0), base radius 3 m |
 | Boxes (centre, half-extents) | (±12, 0) half (1, 5); (0, ±10) half (4, 1); (±20, ±16) half (2, 2) — 8 boxes, symmetric about both axes |
-| Spawn zone | behind each base: Blue x ∈ [26, 29], Red x ∈ [−29, −26]; z ∈ [−20, 20], golden-angle spread like Level 3's `BotPoint` |
+| Spawn zone | two flank strips behind each base, off the flag stand (Ruling R17): Blue x ∈ [26, 29], Red x ∈ [−29, −26]; |z| ∈ [12, 20], 40 slots per strip (even slots +z, odd −z), golden-ratio x spread like Level 3's `BotPoint` |
 
 **Flags.** One per team.
 

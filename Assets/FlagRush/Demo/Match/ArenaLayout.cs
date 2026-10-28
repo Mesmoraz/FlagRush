@@ -44,14 +44,27 @@ namespace FlagRush.Demo
 
         public float2 Base(byte team) => team == 0 ? RedBase : BlueBase;
 
-        /// <summary>Deterministic spawn slot in the team's zone (x in [26,29], z in [-20,20]); index wraps mod 80.</summary>
+        public const float SpawnXMin = 26f, SpawnXMax = 29f;     // |x| band, on the team's own side
+        public const float SpawnZMin = 12f, SpawnZMax = 20f;     // |z| band: two flank strips, none in front of the stand
+
+        /// <summary>
+        /// Deterministic spawn slot in one of the team's two flank strips: |x| in [26,29] on its own side (Blue +x,
+        /// Red -x) and |z| in [12,20], so nobody respawns on the flag stand at (±25, 0). Even slots go to the +z strip,
+        /// odd slots to the -z strip (40 each); within a strip z is evenly spread and x follows the golden-ratio
+        /// sequence. Index wraps mod 80.
+        /// </summary>
         public static float3 SpawnPoint(byte team, int index)
         {
             int i = ((index % SpawnSlots) + SpawnSlots) % SpawnSlots;
             float s = team == 0 ? -1f : 1f;
-            float f = (i + 0.5f) * 0.618034f;
+            float side = (i & 1) == 0 ? 1f : -1f;
+            int k = i >> 1;
+            const int perStrip = SpawnSlots / 2;
+            float f = (k + 0.5f) * 0.618034f;
             f -= math.floor(f);
-            return new float3(s * (26f + 3f * f), 0f, -20f + 40f * (i + 0.5f) / SpawnSlots);
+            float x = SpawnXMin + (SpawnXMax - SpawnXMin) * f;
+            float z = SpawnZMin + (SpawnZMax - SpawnZMin) * (k + 0.5f) / perStrip;
+            return new float3(s * x, 0f, side * z);
         }
     }
 }

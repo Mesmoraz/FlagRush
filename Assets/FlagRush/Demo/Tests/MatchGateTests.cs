@@ -326,7 +326,8 @@ namespace FlagRush.Demo.Tests
         {
             const float tol = 1f;
             float lo = team == 0 ? -29f : 26f, hi = team == 0 ? -26f : 29f;
-            return x >= lo - tol && x <= hi + tol && z >= -20f - tol && z <= 20f + tol;
+            float az = math.abs(z);
+            return x >= lo - tol && x <= hi + tol && az >= 12f - tol && az <= 20f + tol;
         }
 
         static World ServerWorld()
