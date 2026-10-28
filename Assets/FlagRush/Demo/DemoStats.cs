@@ -74,7 +74,7 @@ namespace FlagRush.Demo
         public static string RedFlagLine = "";    // client: MatchHudText.FlagLine for each flag
         public static string BlueFlagLine = "";
         public static readonly MatchEventRing LastMatchEvents = new MatchEventRing(16); // server: the newest match events
-        public static readonly int[] MatchEventTotals = new int[System.Enum.GetValues(typeof(MatchEventKind)).Length]; // sized from the enum, so a new kind cannot overrun it // server: events per MatchEventKind since the match level started (the ring above keeps only 16)
+        public static readonly int[] MatchEventTotals = new int[System.Enum.GetValues(typeof(MatchEventKind)).Length]; // server: events per MatchEventKind since the match level started (the ring above keeps only 16); sized from the enum
 
         // ---- rendering
         public static int DrawnInstances;
