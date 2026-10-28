@@ -67,6 +67,9 @@ namespace FlagRush.Demo
                 return;
             }
 
+            bool match = DemoConfig.IsMatchLevel;
+            var teams = match ? CountTeams(ref state) : default;
+
             var needPlayer = new NativeList<Entity>(Allocator.Temp);
             foreach (var (target, entity) in SystemAPI.Query<RefRO<CommandTarget>>()
                          .WithAll<NetworkStreamInGame, NetworkId>().WithEntityAccess())
@@ -84,6 +87,8 @@ namespace FlagRush.Demo
                     int networkId = em.GetComponentData<NetworkId>(connection).Value;
                     var spawn = PlayerSpawn.Point(networkId);
                     var player = em.Instantiate(prefab);
+                    em.AddComponentData(player, new CombatantServer());
+                    if (match) spawn = AssignTeam(em, player, ref teams);
                     em.SetComponentData(player, new GhostOwner { NetworkId = networkId });
                     em.SetComponentData(player, new PlayerGhost { Position = spawn, BotIndex = -1 });
                     em.SetComponentData(player, new ServerPosition { Value = spawn });
@@ -94,7 +99,7 @@ namespace FlagRush.Demo
             }
             needPlayer.Dispose();
 
-            ReconcileBots(ref state);
+            ReconcileBots(ref state, match, ref teams);
             DemoStats.PlayersOnServer = _players.CalculateEntityCount();
         }
 
@@ -103,7 +108,7 @@ namespace FlagRush.Demo
         /// matches <see cref="Sandbox.Bots"/>. Bots have <c>GhostOwner.NetworkId = -1</c> (no owner) and are never a
         /// connection's CommandTarget or in its LinkedEntityGroup; only entities with <c>BotIndex &gt;= 0</c> are ever destroyed here.
         /// </summary>
-        void ReconcileBots(ref SystemState state)
+        void ReconcileBots(ref SystemState state, bool match, ref TeamCounts teams)
         {
             var em = state.EntityManager;
             int want = math.clamp(Sandbox.Bots, 0, Sandbox.MaxBots);
@@ -131,6 +136,8 @@ namespace FlagRush.Demo
                     used.Add(index);
                     var spawn = PlayerSpawn.BotPoint(index);
                     var bot = em.Instantiate(prefab);
+                    em.AddComponentData(bot, new CombatantServer());
+                    if (match) spawn = AssignTeam(em, bot, ref teams);
                     // No owning connection. Netcode rejects NetworkId 0 on owner-predicted ghosts (GhostSendSystem
                     // logs an error) and documents -1 as "not owned by a player"; clients then interpolate it.
                     em.SetComponentData(bot, new GhostOwner { NetworkId = -1 });
@@ -156,6 +163,32 @@ namespace FlagRush.Demo
             bots.Dispose();
             botEntities.Dispose();
             DemoStats.BotsOnServer = have;
+        }
+
+        /// <summary>Players per team (0 = Red, 1 = Blue); also the next free spawn slot index for that team.</summary>
+        struct TeamCounts
+        {
+            public int Red, Blue;
+        }
+
+        TeamCounts CountTeams(ref SystemState state)
+        {
+            var counts = default(TeamCounts);
+            foreach (var combatant in SystemAPI.Query<RefRO<Combatant>>().WithAll<PlayerGhost>())
+            {
+                if (combatant.ValueRO.Team == 0) counts.Red++;
+                else counts.Blue++;
+            }
+            return counts;
+        }
+
+        /// <summary>Puts a newly instantiated player on the smaller team and returns its spawn point.</summary>
+        static float3 AssignTeam(EntityManager em, Entity player, ref TeamCounts teams)
+        {
+            byte team = MatchTeams.Pick(teams.Red, teams.Blue);
+            int slot = team == 0 ? teams.Red++ : teams.Blue++;
+            em.SetComponentData(player, new Combatant { Team = team, Health = MatchTuning.MaxHealth });
+            return ArenaLayout.SpawnPoint(team, slot);
         }
 
         struct HighestBotIndexFirst : System.Collections.Generic.IComparer<int2>

@@ -55,6 +55,13 @@ namespace FlagRush.Demo
         public static float CommandAgeMs;         // client: CommandAgeTicks at the simulation tick rate
         public static float MispredictionMeters;  // client: |ServerPosition - predicted position at the last received snapshot tick|; 0 with prediction off
 
+        // ---- match (Level 4)
+        public static int FlagsOnServer;          // flag ghosts alive on the server
+        public static int FlagsOnClient;          // flag ghosts the client has received
+        public static bool MatchStateOnClient;    // client has received the match-state ghost
+        public static int RedPlayersOnServer;     // server players with Combatant.Team == 0
+        public static int BluePlayersOnServer;    // server players with Combatant.Team == 1
+
         // ---- rendering
         public static int DrawnInstances;
         public static int DrawCalls;

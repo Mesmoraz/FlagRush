@@ -26,9 +26,11 @@ namespace FlagRush.Demo
             var em = EntityManager;
             var prefab = em.CreateEntity(
                 typeof(PlayerGhost), typeof(ServerPosition), typeof(PlayerInput), typeof(InputBufferData<PlayerInput>),
-                typeof(GhostOwner), typeof(GhostOwnerIsLocal), typeof(LocalTransform), typeof(LocalToWorld));
+                typeof(GhostOwner), typeof(GhostOwnerIsLocal), typeof(LocalTransform), typeof(LocalToWorld),
+                typeof(Combatant), typeof(MatchStats));
             em.SetComponentData(prefab, LocalTransform.Identity);
             em.SetComponentData(prefab, new PlayerGhost { BotIndex = -1 });
+            em.SetComponentData(prefab, new Combatant { Health = MatchTuning.MaxHealth });
             em.SetName(prefab, "PlayerGhostPrefab");
 
             // LocalTransform is not replicated: PlayerGhost.Position already carries the position, and every world
