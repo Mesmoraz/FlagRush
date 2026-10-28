@@ -22,6 +22,8 @@ namespace FlagRush.Demo.Tests
         public IEnumerator SetUp()
         {
             DemoConfig.OverrideLevel(4);
+            DemoStats.ShotsPerSecond = 0f;
+            DemoStats.LastMatchEvents.Clear();
             Sandbox.Bots = 0;
             DemoHud.Collapsed = false;
             SceneManager.LoadScene("SampleScene");

@@ -51,24 +51,14 @@ namespace FlagRush.Demo
                          .Query<RefRW<PlayerGhost>, RefRW<Combatant>, RefRW<MatchStats>, RefRW<LocalTransform>, RefRW<ServerPosition>, RefRO<GhostInstance>>()
                          .WithAll<Simulate>())
             {
-                int id = instance.ValueRO.ghostId;
-                // A ghost id is allocated when the ghost is first sent; until then the player takes no part in flag
-                // rules (a unique negative id that no carrier field can hold).
-                bool known = id != 0;
-                views.Add(new PlayerView
-                {
-                    Id = known ? id : -1 - views.Length,
-                    Position = ghost.ValueRO.Position.xz,
-                    Team = combatant.ValueRO.Team,
-                    Alive = known && combatant.ValueRO.Alive,
-                });
+                views.Add(MatchViews.ToView(ghost.ValueRO, combatant.ValueRO, instance.ValueRO, views.Length));
             }
 
             FlagData red = default, blue = default;
             bool haveRed = false, haveBlue = false;
             foreach (var flag in SystemAPI.Query<RefRO<FlagGhost>>())
             {
-                var f = ToData(flag.ValueRO);
+                var f = MatchViews.ToData(flag.ValueRO);
                 if (f.Team == 0) { red = f; haveRed = true; }
                 else { blue = f; haveBlue = true; }
             }
@@ -165,11 +155,6 @@ namespace FlagRush.Demo
             flagEvents.Dispose();
             roundEvents.Dispose();
         }
-
-        static FlagData ToData(in FlagGhost g) => new()
-        {
-            Team = g.Team, State = g.State, Position = g.Position.xz, CarrierId = g.CarrierGhostId, DroppedTick = g.DroppedTick,
-        };
 
         static MatchData ToData(in MatchStateGhost g) => new()
         {

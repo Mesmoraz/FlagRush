@@ -38,6 +38,8 @@ namespace FlagRush.Demo
         {
             var counters = EntityManager.CreateEntity(typeof(MatchCounters), typeof(MatchEventRecord));
             EntityManager.SetName(counters, "MatchCounters");
+            DemoStats.ShotsPerSecond = 0f;
+            DemoStats.LastMatchEvents.Clear();
         }
 
         protected override void OnUpdate()
