@@ -57,6 +57,9 @@ namespace FlagRush.Demo
             };
         }
 
+        /// <summary>Role: every third bot (index % 3 == 0) defends, the rest attack.</summary>
+        public static bool IsDefender(int botIndex) => botIndex % 3 == 0;
+
         /// <summary>Picks the bot's match state and where it wants to go. Defender = every third bot (index % 3 == 0).</summary>
         public static BotMatchState ChooseState(int botIndex, in PlayerView self, in FlagData ownFlag, in FlagData enemyFlag,
             NativeArray<PlayerView> players, in ArenaLayout layout, out float2 target)
@@ -72,8 +75,7 @@ namespace FlagRush.Demo
                 return BotMatchState.Hunt;
             }
 
-            bool defender = botIndex % 3 == 0;
-            if (!defender)
+            if (!IsDefender(botIndex))
             {
                 target = enemyFlag.Position;
                 return BotMatchState.GoForFlag;
@@ -137,25 +139,49 @@ namespace FlagRush.Demo
             return length > 1e-5f ? to / length : float2.zero;
         }
 
-        /// <summary>Match-mode think: pick a state, steer toward its target, shoot the nearest visible enemy.</summary>
+        /// <summary>
+        /// Match-mode think: pick a state, steer toward its target, shoot the nearest visible enemy, following the
+        /// attack doctrine below (added on top of spec §3 because, without it, the two teams' attackers meet head-on at
+        /// midfield and kill each other, so no flag ever moves; see fix-browser-report.md F1).
+        /// <list type="bullet">
+        /// <item>Wave: an attacker raiding a home flag waits in its spawn strip until its team's next wave departs
+        /// (first <see cref="MatchTuning.BotWaveDepartTicks"/> of every <see cref="MatchTuning.BotWaveTicks"/>), so
+        /// attackers arrive together instead of one at a time into the defenders' fire.</item>
+        /// <item>Lane: while still in its own half it heads for its team's midfield lane (Red z = -14, Blue z = +14),
+        /// so the two teams' waves do not run through each other.</item>
+        /// <item>While raiding (enemy flag not carried) an attacker does not shoot enemy attackers, only defenders and
+        /// humans. Once a flag is carried everyone shoots everyone again.</item>
+        /// <item>A defender that is not hunting its flag's carrier shoots only enemies inside its own half (the zone it
+        /// hunts in), so it does not mow down the other team's attackers before they cross midfield.</item>
+        /// </list>
+        /// </summary>
         public static PlayerInput ThinkMatch(ref BotBrainState s, int botIndex, in PlayerView self, in FlagData ownFlag,
-            in FlagData enemyFlag, NativeArray<PlayerView> players, in ArenaLayout layout)
+            in FlagData enemyFlag, NativeArray<PlayerView> players, in ArenaLayout layout, uint tick)
         {
             var state = ChooseState(botIndex, self, ownFlag, enemyFlag, players, layout, out float2 target);
             bool carrying = state == BotMatchState.Return;
+            bool raiding = state == BotMatchState.GoForFlag && enemyFlag.State == FlagState.Home;
+            float towardEnemy = self.Team == 0 ? 1f : -1f; // +x is toward the enemy base for Red
+            float progress = self.Position.x * towardEnemy;  // < 0 while in the own half
+            if (raiding && progress < -1f) target = new float2(0f, -towardEnemy * MatchTuning.BotLaneZ);
             float distance = math.distance(self.Position, target);
 
             var input = new PlayerInput();
             bool holding = state == BotMatchState.Hold && distance <= MatchTuning.BotHoldRadius;
-            if (!holding) input.Move = SteerToward(self.Position, target, layout);
+            bool waitingForWave = raiding && -progress >= MatchTuning.BotSpawnStripX && tick % MatchTuning.BotWaveTicks >= MatchTuning.BotWaveDepartTicks;
+            if (!holding && !waitingForWave) input.Move = SteerToward(self.Position, target, layout);
             input.Sprint = !carrying && distance > MatchTuning.BotSprintDistance;
 
+            bool ignoreAttackers = state == BotMatchState.GoForFlag && enemyFlag.State != FlagState.Carried;
+            bool ownHalfOnly = IsDefender(botIndex) && ownFlag.State != FlagState.Carried;
             int victim = -1;
             float victimDistance = MatchTuning.BotFireRange;
             for (int i = 0; i < players.Length; i++)
             {
                 var p = players[i];
                 if (!p.Alive || p.Team == self.Team) continue;
+                if (ignoreAttackers && p.Attacker) continue;
+                if (ownHalfOnly && p.Position.x * towardEnemy >= 0f) continue;
                 float d = math.distance(self.Position, p.Position);
                 if (d > victimDistance) continue;
                 if (Obstacles.SegmentHit(self.Position, p.Position, layout, out _, out _)) continue;

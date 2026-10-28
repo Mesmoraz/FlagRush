@@ -14,12 +14,14 @@ namespace FlagRush.Demo
         public byte Team;
     }
 
-    /// <summary>A player as the flag rules see it. Id is never 0.</summary>
+    /// <summary>A player as the flag and bot rules see it. Id is never 0.</summary>
     public struct PlayerView
     {
         public int Id;
         public float2 Position;
         public byte Team;
         public bool Alive;
+        /// <summary>A bot in the Attacker role (<see cref="BotBrain.IsDefender"/> is false). Humans and defenders: false.</summary>
+        public bool Attacker;
     }
 }

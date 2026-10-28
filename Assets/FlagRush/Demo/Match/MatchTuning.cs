@@ -22,5 +22,11 @@ namespace FlagRush.Demo
         public const float BotHoldRadius = 6f;
         public const float BotSprintDistance = 15f;
         public const float BotCornerMargin = 1.5f;
+
+        // Attack doctrine (fix-browser F1): see BotBrain.ThinkMatch.
+        public const uint BotWaveTicks = 600;        // attackers leave their spawn strip together every 10 s...
+        public const uint BotWaveDepartTicks = 60;   // ...during the first 1 s of each wave period
+        public const float BotSpawnStripX = 24f;     // |x| at or beyond this on the own side = waiting in the spawn strip
+        public const float BotLaneZ = 14f;           // midfield lane: Red crosses at z = -14, Blue at z = +14
     }
 }

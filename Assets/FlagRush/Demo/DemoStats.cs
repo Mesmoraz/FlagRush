@@ -73,6 +73,7 @@ namespace FlagRush.Demo
         public static string RedFlagLine = "";    // client: MatchHudText.FlagLine for each flag
         public static string BlueFlagLine = "";
         public static readonly MatchEventRing LastMatchEvents = new MatchEventRing(16); // server: the newest match events
+        public static readonly int[] MatchEventTotals = new int[8]; // server: events per MatchEventKind since the match level started (the ring above keeps only 16)
 
         // ---- rendering
         public static int DrawnInstances;

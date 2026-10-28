@@ -19,6 +19,7 @@ namespace FlagRush.Demo
                 Position = ghost.Position.xz,
                 Team = combatant.Team,
                 Alive = known && combatant.Alive,
+                Attacker = ghost.BotIndex >= 0 && !BotBrain.IsDefender(ghost.BotIndex),
             };
         }
 

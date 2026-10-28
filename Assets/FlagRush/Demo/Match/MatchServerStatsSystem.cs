@@ -22,7 +22,7 @@ namespace FlagRush.Demo
     /// <summary>
     /// Server, managed, after the prediction loop: publishes <see cref="DemoStats.ShotsPerSecond"/> (MatchCounters
     /// delta over 1 s windows) and drains the <see cref="MatchEventRecord"/> buffer into
-    /// <see cref="DemoStats.LastMatchEvents"/>. Below Level 4 both read empty.
+    /// <see cref="DemoStats.LastMatchEvents"/> and <see cref="DemoStats.MatchEventTotals"/>. Below Level 4 both read empty.
     /// </summary>
     [WorldSystemFilter(WorldSystemFilterFlags.ServerSimulation)]
     [UpdateInGroup(typeof(SimulationSystemGroup))]
@@ -40,6 +40,7 @@ namespace FlagRush.Demo
             EntityManager.SetName(counters, "MatchCounters");
             DemoStats.ShotsPerSecond = 0f;
             DemoStats.LastMatchEvents.Clear();
+            System.Array.Clear(DemoStats.MatchEventTotals, 0, DemoStats.MatchEventTotals.Length);
         }
 
         protected override void OnUpdate()
@@ -51,10 +52,15 @@ namespace FlagRush.Demo
                 _windowStart = -1;
                 DemoStats.ShotsPerSecond = 0f;
                 DemoStats.LastMatchEvents.Clear();
+                System.Array.Clear(DemoStats.MatchEventTotals, 0, DemoStats.MatchEventTotals.Length);
                 return;
             }
 
-            for (int i = 0; i < records.Length; i++) DemoStats.LastMatchEvents.Add(records[i].Value);
+            for (int i = 0; i < records.Length; i++)
+            {
+                DemoStats.LastMatchEvents.Add(records[i].Value);
+                DemoStats.MatchEventTotals[(int)records[i].Value.Kind]++;
+            }
             records.Clear();
 
             uint shots = SystemAPI.GetSingleton<MatchCounters>().ShotsTotal;

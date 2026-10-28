@@ -38,7 +38,7 @@ namespace FlagRush.Demo
 
             if (arena.Match)
             {
-                UpdateMatch(ref state, arena.Layout);
+                UpdateMatch(ref state, arena.Layout, tick);
                 return;
             }
 
@@ -53,7 +53,7 @@ namespace FlagRush.Demo
         }
 
         /// <summary>Match levels: bots see every player and both flags, then drive the same PlayerInput humans use.</summary>
-        void UpdateMatch(ref SystemState state, in ArenaLayout layout)
+        void UpdateMatch(ref SystemState state, in ArenaLayout layout, uint tick)
         {
             var views = new NativeList<PlayerView>(Allocator.Temp);
             foreach (var (ghost, combatant, instance) in SystemAPI
@@ -86,7 +86,7 @@ namespace FlagRush.Demo
                 }
                 var own = self.Team == 0 ? red : blue;
                 var enemy = self.Team == 0 ? blue : red;
-                input.ValueRW = BotBrain.ThinkMatch(ref brain.ValueRW, botIndex, self, own, enemy, players, layout);
+                input.ValueRW = BotBrain.ThinkMatch(ref brain.ValueRW, botIndex, self, own, enemy, players, layout, tick);
             }
             views.Dispose();
         }
