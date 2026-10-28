@@ -198,7 +198,7 @@ namespace FlagRush.Demo
             GUILayout.Space(8);
             GUILayout.Label(sandbox
                 ? $"<color=#{Hex(Dim)}>Level 1 shows the readouts; this level lets you cause them. Source: github.com/Mesmoraz/FlagRush</color>"
-                : $"<color=#{Hex(Dim)}>Push it: add <b>?agents=5000&amp;ghosts=200</b> to the URL, open <b>?level=2</b> for live controls, or <b>?level=3</b> to drive a player.  Source: github.com/Mesmoraz/FlagRush</color>", _meaning, GUILayout.Width(leftW - 30f));
+                : $"<color=#{Hex(Dim)}>Push it: add <b>?agents=5000&amp;ghosts=200</b> to the URL, open <b>?level=2</b> for live controls, <b>?level=3</b> to drive a player, or <b>?level=4</b> for the match.  Source: github.com/Mesmoraz/FlagRush</color>", _meaning, GUILayout.Width(leftW - 30f));
             if (!string.IsNullOrEmpty(DemoStats.LastError)) GUILayout.Label($"<color=#{Hex(Fail)}>note: {DemoStats.LastError}</color>", _meaning);
             GUILayout.EndArea();
         }
@@ -291,7 +291,7 @@ namespace FlagRush.Demo
             MatchRow("Flags", $"Red: {DemoStats.RedFlagLine} · Blue: {DemoStats.BlueFlagLine}",
                 "each flag's state: home / carried by you / carried / dropped, with seconds to auto-return", width);
             MatchRow("You", $"{DemoStats.YouKills} kills / {DemoStats.YouDeaths} deaths / {DemoStats.YouCaptures} captures",
-                "kills, deaths and flag captures this round", width);
+                "kills, deaths and flag captures since you joined (the totals survive a round reset)", width);
             MatchRow("Shots resolved on server", $"{DemoStats.ShotsPerSecond:F1} / s",
                 "shots per second across all players; every hit is decided by the server", width);
             MatchRow("Fire → server confirm", DemoStats.FireConfirmMs > 0f ? $"{DemoStats.FireConfirmMs:F0} ms" : "— (fire to measure)",

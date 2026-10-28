@@ -52,7 +52,7 @@
         : level === "3"
         ? "You drive the green cube; bots use the same input path. Try 200 ms latency."
         : level === "4"
-        ? "Capture the flag: WASD to move, hold the mouse to shoot; 149 bots play by the same rules."
+        ? "Capture the flag: WASD to move, hold the mouse to shoot; 31 bots play by the same rules (add &bots=149 for the 150-player load test)."
         : "A server and a client run inside this tab; the panel explains every number.";
       const note = document.getElementById("note");
       if (!window.crossOriginIsolated) note.textContent = "enabling worker threads (one reload)…";

@@ -182,11 +182,15 @@ namespace FlagRush.Demo.Tests
             Teleport(em, human, new float3(-24f * s, 0f, 0f));
             Teleport(em, bot, new float3(-19f * s, 0f, 0f));
 
+            int hitsBefore = DemoStats.MatchEventTotals[(int)MatchEventKind.PlayerHit];
             uint fireTick = DemoStats.ServerTick;
             float start = Time.realtimeSinceStartup;
             PlayerInputGatherSystem.TestOverride = new PlayerInput { Aim = new float2(s, 0f), Fire = true };
             yield return Until(() => em.GetComponentData<Combatant>(bot).RespawnTick != 0, 3f);
             PlayerInputGatherSystem.TestOverride = null;
+            uint deathTick = DemoStats.ServerTick;
+            yield return Until(() => DemoStats.MatchEventTotals[(int)MatchEventKind.PlayerHit] - hitsBefore >= 3, 1f);
+            Assert.That(DemoStats.MatchEventTotals[(int)MatchEventKind.PlayerHit] - hitsBefore, Is.EqualTo(3), "PlayerHit events for the kill (3 hits of 34)");
 
             var dead = em.GetComponentData<Combatant>(bot);
             var botStats = em.GetComponentData<MatchStats>(bot);
@@ -197,6 +201,10 @@ namespace FlagRush.Demo.Tests
             Assert.That(botStats.Deaths, Is.EqualTo(1), "bot deaths");
             Assert.That(humanStats.Kills, Is.EqualTo(1), "human kills");
             Assert.That(humanStats.ShotsFired, Is.GreaterThanOrEqualTo(3), "human shots fired");
+
+            // Still dead 30 ticks before the respawn is due (the death was seen a few ticks after it happened).
+            yield return Until(() => DemoStats.ServerTick - deathTick >= MatchTuning.RespawnTicks - 30, MatchTuning.RespawnTicks / 60f + 2f);
+            Assert.That(em.GetComponentData<Combatant>(bot).Alive, Is.False, "bot respawned before RespawnTicks - 30 ticks");
 
             float respawnStart = Time.realtimeSinceStartup;
             yield return Until(() => em.GetComponentData<Combatant>(bot).Alive, MatchTuning.RespawnTicks / 60f + 1f);
@@ -232,6 +240,130 @@ namespace FlagRush.Demo.Tests
             Debug.Log($"[MatchGate] dead player {before} -> {after} over {DemoStats.ServerTick - startTick} ticks");
             Assert.That(DemoStats.ServerTick - startTick, Is.GreaterThanOrEqualTo(30u), "server did not tick 30 times");
             Assert.That(math.distance(before, after), Is.LessThanOrEqualTo(1e-3f), "dead player moved on the server");
+        }
+
+        [UnityTest]
+        public IEnumerator DeadPlayerDoesNotPushALivePlayer()
+        {
+            Sandbox.Bots = 1;
+            yield return Until(() => DemoStats.PlayersOnServer == 2 && DemoStats.PlayersOnClient == 2 && OwnedReady(), 10f);
+            Assert.That(DemoStats.PlayersOnServer, Is.EqualTo(2), "server players (human + 1 bot)");
+
+            var em = ServerWorld().EntityManager;
+            var human = HumanEntity();
+            var bot = BotEntity();
+            em.RemoveComponent<BotBrainState>(bot);
+            var c = em.GetComponentData<Combatant>(bot);
+            c.RespawnTick = DemoStats.ServerTick + 9999;
+            c.Health = 0;
+            em.SetComponentData(bot, c);
+            var body = new float3(-24f, 0f, 0f);
+            Teleport(em, bot, body);
+            var parked = body + new float3(0.1f, 0f, 0f); // well inside the 0.6 m contact distance
+            Teleport(em, human, parked);
+
+            uint startTick = DemoStats.ServerTick;
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (DemoStats.ServerTick - startTick < 30 && Time.realtimeSinceStartup < deadline) yield return null;
+
+            var after = em.GetComponentData<PlayerGhost>(human).Position;
+            Debug.Log($"[MatchGate] live player parked on a body {parked} -> {after} over {DemoStats.ServerTick - startTick} ticks");
+            Assert.That(DemoStats.ServerTick - startTick, Is.GreaterThanOrEqualTo(30u), "server did not tick 30 times");
+            Assert.That(math.distance(parked, after), Is.LessThanOrEqualTo(1e-3f), "a dead player pushed a live one");
+            Assert.That(math.distance(body, em.GetComponentData<PlayerGhost>(bot).Position), Is.LessThanOrEqualTo(1e-3f), "the dead body was pushed");
+        }
+
+        [UnityTest]
+        public IEnumerator RoundResetRevivesAndSendsFlagsHome()
+        {
+            Sandbox.Bots = 1;
+            yield return Until(() => DemoStats.PlayersOnServer == 2 && DemoStats.PlayersOnClient == 2 && OwnedReady()
+                                     && DemoStats.FlagsOnServer == 2 && DemoStats.MatchStateOnClient, 10f);
+            Assert.That(DemoStats.PlayersOnServer, Is.EqualTo(2), "server players (human + 1 bot)");
+
+            var world = ServerWorld();
+            var em = world.EntityManager;
+            var human = HumanEntity();
+            var bot = BotEntity();
+            em.RemoveComponent<BotBrainState>(bot);
+            byte team = em.GetComponentData<Combatant>(human).Team;
+            byte botTeam = em.GetComponentData<Combatant>(bot).Team;
+            Assert.That(botTeam, Is.Not.EqualTo(team), "bot is on the human's team");
+            float s = team == 0 ? 1f : -1f;
+            Teleport(em, human, new float3(-24f * s, 0f, 0f));
+            Teleport(em, bot, new float3(-19f * s, 0f, 0f));
+            int botId = em.GetComponentData<GhostInstance>(bot).ghostId;
+
+            // The bot carries the flag of the team opposite to its own; the round has Ended with a score on the board.
+            using (var fq = em.CreateEntityQuery(ComponentType.ReadWrite<FlagGhost>()))
+            using (var flags = fq.ToEntityArray(Allocator.Temp))
+                foreach (var f in flags)
+                {
+                    var g = em.GetComponentData<FlagGhost>(f);
+                    if (g.Team == botTeam) continue;
+                    g.State = FlagState.Carried; g.CarrierGhostId = botId; g.Position = new float3(-19f * s, 0f, 0f);
+                    em.SetComponentData(f, g);
+                }
+            uint now = DemoStats.ServerTick;
+            uint endTick = now + 150;
+            using (var mq = em.CreateEntityQuery(ComponentType.ReadWrite<MatchStateGhost>()))
+            {
+                var e = mq.GetSingletonEntity();
+                em.SetComponentData(e, new MatchStateGhost { Phase = MatchPhase.Ended, PhaseEndTick = endTick, RedScore = 3, RoundStartTick = now - 100 });
+            }
+
+            // While Ended, shots are frozen: the human fires at the bot for 40 ticks and nothing lands.
+            int hitsBefore = DemoStats.MatchEventTotals[(int)MatchEventKind.PlayerHit];
+            uint startTick = DemoStats.ServerTick;
+            PlayerInputGatherSystem.TestOverride = new PlayerInput { Aim = new float2(s, 0f), Fire = true };
+            float deadline = Time.realtimeSinceStartup + 5f;
+            while (DemoStats.ServerTick - startTick < 40 && Time.realtimeSinceStartup < deadline) yield return null;
+            PlayerInputGatherSystem.TestOverride = null;
+            Assert.That(DemoStats.ServerTick - startTick, Is.GreaterThanOrEqualTo(40u), "server did not tick 40 times");
+            Assert.That(DemoStats.MatchEventTotals[(int)MatchEventKind.PlayerHit], Is.EqualTo(hitsBefore), "a hit landed while the round was Ended");
+            Assert.That(em.GetComponentData<Combatant>(bot).Health, Is.EqualTo(MatchTuning.MaxHealth), "bot lost health while Ended");
+            Assert.That(em.GetComponentData<Combatant>(bot).Carrying, Is.True, "bot should be carrying before the reset");
+            Assert.That(DemoStats.ServerTick, Is.LessThan(endTick), "test too slow: the reset already happened");
+
+            var hc = em.GetComponentData<Combatant>(human);
+            hc.RespawnTick = DemoStats.ServerTick + 9999;
+            hc.Health = 0;
+            em.SetComponentData(human, hc);
+
+            yield return Until(() => TeamScore(world, 0) == 0 && TeamScore(world, 1) == 0 && ServerPhase(world) == MatchPhase.Playing, 5f);
+            yield return null; // let the reset tick's writes settle
+
+            Assert.That(ServerPhase(world), Is.EqualTo(MatchPhase.Playing), "phase after the reset");
+            Assert.That(TeamScore(world, 0), Is.EqualTo(0), "Red score after the reset");
+            Assert.That(TeamScore(world, 1), Is.EqualTo(0), "Blue score after the reset");
+            foreach (var p in new[] { human, bot })
+            {
+                var c = em.GetComponentData<Combatant>(p);
+                var at = em.GetComponentData<PlayerGhost>(p).Position;
+                string who = p == human ? "human" : "bot";
+                Assert.That(c.Alive, Is.True, $"{who} still dead after the reset");
+                Assert.That(c.Health, Is.EqualTo(MatchTuning.MaxHealth), $"{who} health after the reset");
+                Assert.That(c.Carrying, Is.False, $"{who} still carrying after the reset");
+                Assert.That(InZone(c.Team, at.x, at.z), Is.True, $"{who} (team {c.Team}) at {at} is outside its spawn strip after the reset");
+            }
+            using var arenaQuery = em.CreateEntityQuery(ComponentType.ReadOnly<ActiveArena>());
+            var layout = arenaQuery.GetSingleton<ActiveArena>().Layout;
+            using var flagQuery = em.CreateEntityQuery(ComponentType.ReadOnly<FlagGhost>());
+            using var flagData = flagQuery.ToComponentDataArray<FlagGhost>(Allocator.Temp);
+            Assert.That(flagData.Length, Is.EqualTo(2), "flag count");
+            foreach (var f in flagData)
+            {
+                var home = layout.Base(f.Team);
+                Assert.That(f.State, Is.EqualTo(FlagState.Home), $"flag {f.Team} not home after the reset");
+                Assert.That(f.CarrierGhostId, Is.EqualTo(0), $"flag {f.Team} still has a carrier");
+                Assert.That(math.distance(f.Position.xz, home), Is.LessThanOrEqualTo(0.01f), $"flag {f.Team} not at its stand");
+            }
+        }
+
+        static MatchPhase ServerPhase(World world)
+        {
+            using var query = world.EntityManager.CreateEntityQuery(ComponentType.ReadOnly<MatchStateGhost>());
+            return query.CalculateEntityCount() == 1 ? query.GetSingleton<MatchStateGhost>().Phase : MatchPhase.Ended;
         }
 
         [UnityTest]

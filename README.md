@@ -20,7 +20,7 @@ Open the **Sandbox** tab (`?level=2`) for live controls: latency/jitter/loss, ti
 
 Open the **Player** tab (`?level=3`) to drive a green cube with WASD or a gamepad (click the game first), with bots on the same input path, a prediction on/off toggle and live prediction readouts.
 
-Open the **Match** tab (`?level=4`) to play capture the flag against 149 bots: WASD to move, hold the mouse (or right trigger) to shoot, take the enemy flag home. Hits are decided by the server, with no lag compensation yet.
+Open the **Match** tab (`?level=4`) to play capture the flag against 31 bots by default (add `&bots=149` for the 150-player load test): WASD to move, hold the mouse (or right trigger) to shoot, take the enemy flag home. Hits are decided by the server, with no lag compensation yet.
 
 ## What the numbers mean
 

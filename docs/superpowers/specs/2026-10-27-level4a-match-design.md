@@ -235,12 +235,12 @@ Rulings taken during implementation that change or sharpen the text above:
 - **Diagnostics.** `DemoStats.MatchEventTotals[kind]` counts every event since the level started (the
   16-entry `LastMatchEvents` ring drops flag events under about 60 hits/s).
 
-**Known behaviour at 150 players.** The midfield is a meat-grinder: 10-20 kills/s, and a carrier usually
-dies within a second or two of the pickup because the enemy spawn strip is close. Flags are taken often
-(159 takes in 300 s in the Editor) but captures are rare. Captures are reliably gated only at small
-counts (`MatchFlowTests`: take, drop and return within 120 s at 11 bots and within 60 s at 31). Editor
-diagnostics at 149 bots showed 0 captures; the single browser run showed 3. The 150-player level is a
-networking load test more than a balanced game.
+**Known behaviour at 150 players.** The midfield is a meat-grinder: the server resolves 47-135 shots/s, and a carrier
+usually dies within a second or two of the pickup because the enemy spawn strip is close. Flags are taken often
+(159 takes in 300 s in the Editor) but captures are rare. Captures are not gated by a timed test: `MatchFlowTests`
+gates take, drop and return (within 120 s at 11 bots, 60 s at 31). An 11-player Editor run with the current code
+scored 3 captures in one 300 s round. Editor diagnostics at 149 bots showed 0 captures; the single browser run
+showed 3. The 150-player level is a networking load test more than a balanced game.
 
 **Browser result.** See [docs/m1-web-spike.md](../../m1-web-spike.md#level-4--match-150-players). Frame time
 6.1 ms (target 16.7 ms met); shots are server-decided with no lag compensation yet.

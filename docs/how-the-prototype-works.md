@@ -234,7 +234,7 @@ of prediction: it is a guess, and the server has the last word.
 
 ## 6c. Level 4 — the match: rules the server enforces
 
-Open `?level=4`. You are on a team (Red or Blue, whichever has fewer players) with 149 bots, and the
+Open `?level=4`. You are on a team (Red or Blue, whichever has fewer players) with 31 bots by default (add `&bots=149` for the 150-player load test), and the
 same pieces as Level 3 now carry a game: two bases at x = ±25, eight boxes that block movement and
 shots, one flag per team, and a scoreboard (Red score, round clock, Blue score) at the top.
 
@@ -257,10 +257,10 @@ input path as you.
 pressing fire to the snapshot that counts that shot). *Replicated objects* now counts the two flag ghosts
 and the match-state ghost as well as the players.
 
-**What to expect at 150 players.** The midfield is a meat-grinder: the server resolves 50-135 shots per second and a
+**What to expect at 150 players.** The midfield is a meat-grinder: the server resolves 47-135 shots per second and a
 flag carrier usually dies within a second or two of the pickup, so captures are rare (bots attack in
-waves along two lanes to keep flags moving at all). With 11 players (`?level=4&bots=10`) Editor runs measured
-3-4 captures per 5-minute round. At 150 players this level is mostly a load test for the netcode.
+waves along two lanes to keep flags moving at all). With 11 players (`?level=4&bots=10`) an Editor run with the current
+code measured 3 captures in one 5-minute round. At 150 players this level is mostly a load test for the netcode.
 
 ---
 
