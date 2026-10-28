@@ -4,7 +4,7 @@ namespace FlagRush.Demo
     public static class MatchTuning
     {
         public const uint FireIntervalTicks = 15;
-        public const uint RespawnTicks = 180;
+        public const uint RespawnTicks = 300;   // 5 s (was 3 s; spawn-zones-report.md: thins the defenders' respawn conveyor during a 10 s wave)
         public const uint AutoReturnTicks = 600;
         public const uint RoundTicks = 18000;
         public const uint EndedTicks = 300;

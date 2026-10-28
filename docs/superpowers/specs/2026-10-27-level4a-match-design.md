@@ -65,7 +65,7 @@ footprints that block everything (they are taller than players).
 | Shot | 2D hitscan from the shooter's position along `Aim`, range 40 m, player hit radius `PlayerTuning.Radius` (0.6 m); boxes block; team-mates are ignored (no friendly fire) |
 | Damage | 100 health, 34 per hit → 3 hits kill |
 | Hit flash | target's `LastHitTick` set; client flashes it for 0.15 s |
-| Death | drop flag, `RespawnTick = now + 180` (3 s); dead players get zero input and cannot fire, pick up or be hit |
+| Death | drop flag, `RespawnTick = now + 300` (5 s; was 180, changed with Ruling R17, see spawn-zones-report.md); dead players get zero input and cannot fire, pick up or be hit |
 | Respawn | at `RespawnTick`: full health, teleported into own spawn zone |
 
 **Round.** First team to 3 captures, or 18 000 ticks (5 min) → phase `Ended` for 300 ticks (5 s), then a
@@ -181,7 +181,7 @@ selection and box-corner steering, and the `CaptureTheFlagRuleSet` adapter's scr
 **PlayMode gate `MatchGateTests`:** level 4 spawns 2 flags and one `MatchState`; scripted input walks
 the human to the enemy flag and home → server score becomes 1 and a `FlagCaptured` was recorded;
 scripted fire at a stationary bot (bot brain disabled by a test hook) kills it in 3 hits, it drops and
-respawns after 180 ticks; level override below 4 despawns the match ghosts. All existing tests (46)
+respawns after `RespawnTicks`; level override below 4 despawns the match ghosts. All existing tests (46)
 stay green and `Logs/Editor.log` has no "Burst error".
 
 **Browser** (WebGL2 build, `?level=4&bots=149`): a full round plays to its end; frame time ≤ 16.7 ms;

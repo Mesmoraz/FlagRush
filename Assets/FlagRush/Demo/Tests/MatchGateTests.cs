@@ -203,7 +203,7 @@ namespace FlagRush.Demo.Tests
             var revived = em.GetComponentData<Combatant>(bot);
             var at = em.GetComponentData<PlayerGhost>(bot).Position;
             Debug.Log($"[MatchGate] bot respawned after {Time.realtimeSinceStartup - respawnStart:F2}s at {at} health {revived.Health}");
-            Assert.That(revived.Alive, Is.True, "bot did not respawn within 180 ticks + 1 s");
+            Assert.That(revived.Alive, Is.True, "bot did not respawn within RespawnTicks + 1 s");
             Assert.That(revived.Health, Is.EqualTo(MatchTuning.MaxHealth), "respawn health");
             Assert.That(InZone(revived.Team, at.x, at.z), Is.True, $"bot respawned at {at}, outside its spawn zone");
         }

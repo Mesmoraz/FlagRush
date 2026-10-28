@@ -102,7 +102,7 @@ namespace FlagRush.Demo.Tests
             Assert.AreEqual(32, c.Health);
             Assert.IsTrue(Combat.ApplyHit(ref c, 102));
             Assert.AreEqual(0, c.Health);
-            Assert.AreEqual(102u + 180u, c.RespawnTick);
+            Assert.AreEqual(102u + MatchTuning.RespawnTicks, c.RespawnTick);
             Assert.AreEqual(102u, c.LastHitTick);
             Assert.IsFalse(c.Alive);
         }
