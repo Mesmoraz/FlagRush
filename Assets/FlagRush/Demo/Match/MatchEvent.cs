@@ -23,5 +23,7 @@ namespace FlagRush.Demo
         public bool Alive;
         /// <summary>A bot in the Attacker role (<see cref="BotBrain.IsDefender"/> is false). Humans and defenders: false.</summary>
         public bool Attacker;
+        /// <summary>Any bot (attacker or defender). Humans: false. Used to cap carrier hunters (Ruling R19).</summary>
+        public bool Bot;
     }
 }

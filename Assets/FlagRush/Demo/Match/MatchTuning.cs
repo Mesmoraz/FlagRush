@@ -28,5 +28,6 @@ namespace FlagRush.Demo
         public const uint BotWaveDepartTicks = 60;   // ...during the first 1 s of each wave period
         public const float BotSpawnStripX = 24f;     // |x| at or beyond this on the own side = waiting in the spawn strip
         public const float BotLaneZ = 14f;           // midfield lane: Red crosses at z = -14, Blue at z = +14
+        public const int BotCarrierHunters = 4;      // Ruling R19: only the 4 nearest bots of the robbed team hunt the carrier
     }
 }

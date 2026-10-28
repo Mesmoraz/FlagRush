@@ -60,6 +60,28 @@ namespace FlagRush.Demo
         /// <summary>Role: every third bot (index % 3 == 0) defends, the rest attack.</summary>
         public static bool IsDefender(int botIndex) => botIndex % 3 == 0;
 
+        /// <summary>
+        /// Ruling R19: while <paramref name="ownFlag"/> is carried, only the <see cref="MatchTuning.BotCarrierHunters"/>
+        /// alive bots of this team nearest to it hunt the carrier; every other bot keeps its normal role. Rank = number of
+        /// alive teammate bots strictly nearer to the flag (ties broken by lower id), so the set is deterministic and
+        /// each bot can decide on its own without a shared list.
+        /// </summary>
+        public static bool HuntsCarrier(in PlayerView self, in FlagData ownFlag, NativeArray<PlayerView> players)
+        {
+            if (ownFlag.State != FlagState.Carried) return false;
+            float own = math.distancesq(self.Position, ownFlag.Position);
+            int nearer = 0;
+            for (int i = 0; i < players.Length; i++)
+            {
+                var p = players[i];
+                if (!p.Alive || !p.Bot || p.Team != self.Team || p.Id == self.Id) continue;
+                float d = math.distancesq(p.Position, ownFlag.Position);
+                if (d < own || (d == own && p.Id < self.Id))
+                    if (++nearer >= MatchTuning.BotCarrierHunters) return false;
+            }
+            return true;
+        }
+
         /// <summary>Picks the bot's match state and where it wants to go. Defender = every third bot (index % 3 == 0).</summary>
         public static BotMatchState ChooseState(int botIndex, in PlayerView self, in FlagData ownFlag, in FlagData enemyFlag,
             NativeArray<PlayerView> players, in ArenaLayout layout, out float2 target)
@@ -69,7 +91,7 @@ namespace FlagRush.Demo
                 target = layout.Base(self.Team);
                 return BotMatchState.Return;
             }
-            if (ownFlag.State == FlagState.Carried)
+            if (HuntsCarrier(self, ownFlag, players))
             {
                 target = ownFlag.Position;
                 return BotMatchState.Hunt;
@@ -153,6 +175,8 @@ namespace FlagRush.Demo
         /// humans. Once a flag is carried everyone shoots everyone again.</item>
         /// <item>A defender that is not hunting its flag's carrier shoots only enemies inside its own half (the zone it
         /// hunts in), so it does not mow down the other team's attackers before they cross midfield.</item>
+        /// <item>Ruling R19: only the 4 nearest bots of the robbed team hunt a carrier (<see cref="HuntsCarrier"/>);
+        /// the rest keep their normal role.</item>
         /// </list>
         /// </summary>
         public static PlayerInput ThinkMatch(ref BotBrainState s, int botIndex, in PlayerView self, in FlagData ownFlag,
@@ -173,7 +197,8 @@ namespace FlagRush.Demo
             input.Sprint = !carrying && distance > MatchTuning.BotSprintDistance;
 
             bool ignoreAttackers = state == BotMatchState.GoForFlag && enemyFlag.State != FlagState.Carried;
-            bool ownHalfOnly = IsDefender(botIndex) && ownFlag.State != FlagState.Carried;
+            bool huntingCarrier = state == BotMatchState.Hunt && HuntsCarrier(self, ownFlag, players);
+            bool ownHalfOnly = IsDefender(botIndex) && !huntingCarrier;
             int victim = -1;
             float victimDistance = MatchTuning.BotFireRange;
             for (int i = 0; i < players.Length; i++)

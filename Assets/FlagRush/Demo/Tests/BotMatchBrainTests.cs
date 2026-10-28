@@ -37,6 +37,60 @@ namespace FlagRush.Demo.Tests
         }
 
         [Test]
+        public void OnlyTheFourNearestBotsHuntACarrier()
+        {
+            // Red's flag is carried by Blue player 99 at (0, 0). Ten Red bots stand 1..10 m from it (ids 1..10, listed
+            // in shuffled order; attackers and defenders mixed); a Red human at 0.5 m does not count toward the cap.
+            var carrierAt = new float2(0f, 0f);
+            var own = new FlagData { Team = 0, State = FlagState.Carried, CarrierId = 99, Position = carrierAt };
+            var list = new System.Collections.Generic.List<PlayerView>
+            {
+                new() { Id = 99, Position = carrierAt, Team = 1, Alive = true, Attacker = true, Bot = true },
+                new() { Id = 50, Position = new float2(0.5f, 0f), Team = 0, Alive = true },
+            };
+            int[] order = { 7, 2, 10, 4, 1, 9, 3, 6, 8, 5 };
+            foreach (int id in order)
+            {
+                float angle = id * 0.7f;
+                list.Add(new PlayerView
+                {
+                    Id = id, Position = carrierAt + id * new float2(math.cos(angle), math.sin(angle)), Team = 0, Alive = true,
+                    Attacker = id % 3 != 0, Bot = true,
+                });
+            }
+            using var players = new NativeArray<PlayerView>(list.ToArray(), Allocator.Temp);
+
+            var hunters = new System.Collections.Generic.List<int>();
+            for (int i = 0; i < players.Length; i++)
+            {
+                var p = players[i];
+                if (!p.Bot || p.Team != 0) continue;
+                int botIndex = p.Attacker ? 1 : 0;
+                var state = BotBrain.ChooseState(botIndex, p, own, Home(1, Empty), players, Empty, out float2 target);
+                if (state == BotMatchState.Hunt && target.Equals(carrierAt)) hunters.Add(p.Id);
+                else if (p.Attacker) Assert.That(state, Is.EqualTo(BotMatchState.GoForFlag), $"attacker {p.Id} left its role");
+                else Assert.That(state, Is.EqualTo(BotMatchState.Hold), $"defender {p.Id} left its role (no intruder in its half)");
+            }
+            hunters.Sort();
+            Assert.That(hunters, Is.EqualTo(new[] { 1, 2, 3, 4 }), "only the 4 nearest Red bots hunt the carrier");
+        }
+
+        [Test]
+        public void DeadBotsDoNotTakeAHunterSlot()
+        {
+            var own = new FlagData { Team = 0, State = FlagState.Carried, CarrierId = 99, Position = float2.zero };
+            var players = new NativeArray<PlayerView>(6, Allocator.Temp);
+            for (int i = 0; i < 5; i++)
+                players[i] = new PlayerView { Id = i + 1, Position = new float2(i + 1f, 0f), Team = 0, Alive = i != 0, Bot = true, Attacker = true };
+            players[5] = new PlayerView { Id = 99, Position = float2.zero, Team = 1, Alive = true, Bot = true, Attacker = true };
+            Assert.That(BotBrain.HuntsCarrier(players[4], own, players), Is.True, "5th nearest hunts when the nearest is dead");
+            players[0] = new PlayerView { Id = 1, Position = new float2(1f, 0f), Team = 0, Alive = true, Bot = true, Attacker = true };
+            Assert.That(BotBrain.HuntsCarrier(players[4], own, players), Is.False, "5th nearest does not hunt when 4 nearer bots live");
+            Assert.That(BotBrain.HuntsCarrier(players[4], FlagData.AtHome(0, Empty), players), Is.False, "no carrier, no hunt");
+            players.Dispose();
+        }
+
+        [Test]
         public void AttackerGoesForEnemyFlag()
         {
             var self = View(1, new float2(-20f, 3f), 0);
