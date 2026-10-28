@@ -257,10 +257,10 @@ input path as you.
 pressing fire to the snapshot that counts that shot). *Replicated objects* now counts the two flag ghosts
 and the match-state ghost as well as the players.
 
-**What to expect at 150 players.** The midfield is a meat-grinder: kills run at 10-20 per second and a
+**What to expect at 150 players.** The midfield is a meat-grinder: the server resolves 50-135 shots per second and a
 flag carrier usually dies within a second or two of the pickup, so captures are rare (bots attack in
-waves along two lanes to keep flags moving at all). With fewer bots (`?level=4&bots=10`) captures happen
-every minute or so. At 150 players this level is mostly a load test for the netcode.
+waves along two lanes to keep flags moving at all). With 11 players (`?level=4&bots=10`) Editor runs measured
+3-4 captures per 5-minute round. At 150 players this level is mostly a load test for the netcode.
 
 ---
 
