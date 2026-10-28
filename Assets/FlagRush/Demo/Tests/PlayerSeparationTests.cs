@@ -11,7 +11,7 @@ namespace FlagRush.Demo.Tests
         static float3[] Resolve(params float3[] points)
         {
             using var positions = new NativeArray<float3>(points, Allocator.Temp);
-            PlayerSeparation.Resolve(positions, R, ArenaBounds.Default);
+            PlayerSeparation.Resolve(positions, R, ArenaBounds.Default, ArenaLayout.Empty);
             return positions.ToArray();
         }
 

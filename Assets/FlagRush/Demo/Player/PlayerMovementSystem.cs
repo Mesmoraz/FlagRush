@@ -16,13 +16,18 @@ namespace FlagRush.Demo
     public partial struct PlayerMovementSystem : ISystem
     {
         [BurstCompile]
-        public void OnCreate(ref SystemState state) => state.RequireForUpdate<PlayerGhost>();
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<PlayerGhost>();
+            state.RequireForUpdate<ActiveArena>();
+        }
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
             float dt = SystemAPI.Time.DeltaTime;
             var arena = ArenaBounds.Default;
+            var layout = SystemAPI.GetSingleton<ActiveArena>().Layout;
 
             // ServerPosition is not touched here: on the server PlayerSeparationSystem runs right after this system
             // and writes it for every player; on the client it is replicated-only (never written locally).
@@ -32,7 +37,7 @@ namespace FlagRush.Demo
             {
                 var position = ghost.ValueRO.Position;
                 var velocity = ghost.ValueRO.Velocity;
-                PlayerMotion.Step(ref position, ref velocity, input.ValueRO, dt, arena);
+                PlayerMotion.Step(ref position, ref velocity, input.ValueRO, dt, arena, layout);
                 ghost.ValueRW.Position = position;
                 ghost.ValueRW.Velocity = velocity;
                 transform.ValueRW.Position = position;

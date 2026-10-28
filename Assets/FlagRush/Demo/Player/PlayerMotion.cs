@@ -25,7 +25,7 @@ namespace FlagRush.Demo
     /// <summary>Pure, deterministic movement step. Runs identically on client (prediction) and server.</summary>
     public static class PlayerMotion
     {
-        public static void Step(ref float3 position, ref float2 velocity, in PlayerInput input, float dt, in ArenaBounds arena)
+        public static void Step(ref float3 position, ref float2 velocity, in PlayerInput input, float dt, in ArenaBounds arena, in ArenaLayout layout)
         {
             float2 move = input.Move;
             float moveLen = math.length(move);
@@ -49,6 +49,8 @@ namespace FlagRush.Demo
 
             position.x = clamped.x;
             position.z = clamped.y;
+
+            Obstacles.Slide(ref position, ref velocity, PlayerTuning.Radius, layout);
         }
     }
 }

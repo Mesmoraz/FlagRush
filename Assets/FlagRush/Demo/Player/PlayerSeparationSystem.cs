@@ -19,18 +19,23 @@ namespace FlagRush.Demo
     public partial struct PlayerSeparationSystem : ISystem
     {
         [BurstCompile]
-        public void OnCreate(ref SystemState state) => state.RequireForUpdate<PlayerGhost>();
+        public void OnCreate(ref SystemState state)
+        {
+            state.RequireForUpdate<PlayerGhost>();
+            state.RequireForUpdate<ActiveArena>();
+        }
 
         [BurstCompile]
         public void OnUpdate(ref SystemState state)
         {
+            var layout = SystemAPI.GetSingleton<ActiveArena>().Layout;
             var positions = new NativeList<float3>(Allocator.Temp);
             // Same query shape in both passes, so the write-back sees the entities in the gather order.
             foreach (var (ghost, _, _) in SystemAPI
                          .Query<RefRW<PlayerGhost>, RefRW<LocalTransform>, RefRW<ServerPosition>>().WithAll<Simulate>())
                 positions.Add(ghost.ValueRO.Position);
 
-            PlayerSeparation.Resolve(positions.AsArray(), PlayerTuning.Radius, ArenaBounds.Default);
+            PlayerSeparation.Resolve(positions.AsArray(), PlayerTuning.Radius, ArenaBounds.Default, layout);
 
             int i = 0;
             foreach (var (ghost, transform, serverPosition) in SystemAPI

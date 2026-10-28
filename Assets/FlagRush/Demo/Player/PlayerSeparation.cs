@@ -15,7 +15,7 @@ namespace FlagRush.Demo
         public const float CellSize = 2f;
         const float CoincidentEpsilon = 1e-6f;
 
-        public static void Resolve(NativeArray<float3> positions, float radius, in ArenaBounds arena)
+        public static void Resolve(NativeArray<float3> positions, float radius, in ArenaBounds arena, in ArenaLayout layout)
         {
             int count = positions.Length;
             if (count == 0) return;
@@ -58,6 +58,8 @@ namespace FlagRush.Demo
             {
                 var p = positions[i];
                 float2 xz = math.clamp(p.xz, lo, hi);
+                xz = Obstacles.PushOut(xz, radius, layout);
+                xz = math.clamp(xz, lo, hi);
                 positions[i] = new float3(xz.x, p.y, xz.y);
             }
         }

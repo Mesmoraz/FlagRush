@@ -30,6 +30,29 @@ namespace FlagRush.Demo.Tests
         }
 
         [Test]
+        public void Level4IsMatchAndPlayerLevel()
+        {
+            DemoConfig.OverrideLevel(4);
+            Assert.AreEqual(4, DemoConfig.Level);
+            Assert.IsTrue(DemoConfig.IsMatchLevel);
+            Assert.IsTrue(DemoConfig.IsPlayerLevel);
+        }
+
+        [Test]
+        public void Level3IsNotMatch()
+        {
+            DemoConfig.OverrideLevel(3);
+            Assert.IsFalse(DemoConfig.IsMatchLevel);
+        }
+
+        [Test]
+        public void Level5ClampsTo4()
+        {
+            DemoConfig.OverrideLevel(5);
+            Assert.AreEqual(4, DemoConfig.Level);
+        }
+
+        [Test]
         public void PredictionResetsToOn()
         {
             Sandbox.PredictionEnabled = false;
