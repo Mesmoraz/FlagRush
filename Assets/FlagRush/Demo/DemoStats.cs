@@ -61,11 +61,52 @@ namespace FlagRush.Demo
         public static bool MatchStateOnClient;    // client has received the match-state ghost
         public static int RedPlayersOnServer;     // server players with Combatant.Team == 0
         public static int BluePlayersOnServer;    // server players with Combatant.Team == 1
+        public static float ShotsPerSecond;       // server: shots resolved per second across all players (1 s window)
+        public static readonly MatchEventRing LastMatchEvents = new MatchEventRing(16); // server: the newest match events
 
         // ---- rendering
         public static int DrawnInstances;
         public static int DrawCalls;
 
         public static string LastError = "";
+    }
+
+    /// <summary>Fixed-size ring of the newest <see cref="MatchEvent"/>s; index 0 is the oldest kept.</summary>
+    public sealed class MatchEventRing
+    {
+        readonly MatchEvent[] _items;
+        int _start;
+
+        public MatchEventRing(int capacity) => _items = new MatchEvent[capacity];
+
+        public int Capacity => _items.Length;
+        public int Count { get; private set; }
+
+        public MatchEvent this[int index] => _items[(_start + index) % _items.Length];
+
+        public void Add(MatchEvent e)
+        {
+            if (Count < _items.Length)
+            {
+                _items[(_start + Count) % _items.Length] = e;
+                Count++;
+                return;
+            }
+            _items[_start] = e;
+            _start = (_start + 1) % _items.Length;
+        }
+
+        public void Clear()
+        {
+            _start = 0;
+            Count = 0;
+        }
+
+        public MatchEvent[] ToArray()
+        {
+            var copy = new MatchEvent[Count];
+            for (int i = 0; i < Count; i++) copy[i] = this[i];
+            return copy;
+        }
     }
 }
