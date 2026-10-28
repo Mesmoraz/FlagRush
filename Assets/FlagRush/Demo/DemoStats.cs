@@ -57,6 +57,7 @@ namespace FlagRush.Demo
 
         // ---- match (Level 4)
         public static int FlagsOnServer;          // flag ghosts alive on the server
+        public static int MatchStatesOnServer;    // match-state ghosts alive on the server (1 at Level 4, else 0)
         public static int FlagsOnClient;          // flag ghosts the client has received
         public static bool MatchStateOnClient;    // client has received the match-state ghost
         public static int RedPlayersOnServer;     // server players with Combatant.Team == 0

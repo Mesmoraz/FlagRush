@@ -19,18 +19,26 @@ namespace FlagRush.Demo
         public static bool? Threads(int swarmCount, int threadsSeen)
             => HasAgents(swarmCount) ? threadsSeen > 1 : (bool?)null;
 
-        /// <summary>Ghosts the client should hold: the orange probe objects plus every player (human and bot).</summary>
-        public static int ExpectedGhosts(int ghostTarget, int playersOnServer) => ghostTarget + playersOnServer;
+        /// <summary>
+        /// Ghosts the client should hold: the orange probe objects plus every player (human and bot), plus at Level 4
+        /// the match ghosts on the server (2 flags + 1 match state; 0 below Level 4).
+        /// </summary>
+        public static int ExpectedGhosts(int ghostTarget, int playersOnServer, int matchGhostsOnServer = 0)
+            => ghostTarget + playersOnServer + matchGhostsOnServer;
 
         /// <summary>
         /// Replicated-objects row: the client holds exactly the expected ghosts, and if there are probe ghosts their
         /// replicated tick field has arrived (the probe tick is how the HUD knows ghost fields update).
         /// </summary>
-        public static bool Ghosts(int ghostsOnClient, int ghostTarget, int playersOnServer, uint newestReplicatedTick)
+        public static bool Ghosts(int ghostsOnClient, int ghostTarget, int playersOnServer, uint newestReplicatedTick, int matchGhostsOnServer = 0)
         {
-            int expected = ExpectedGhosts(ghostTarget, playersOnServer);
+            int expected = ExpectedGhosts(ghostTarget, playersOnServer, matchGhostsOnServer);
             return expected > 0 && ghostsOnClient == expected && (ghostTarget == 0 || newestReplicatedTick > 0);
         }
+
+        /// <summary>What the replicated-objects count is made of, for the compact row's label.</summary>
+        public static string GhostsLabel(int matchGhostsOnServer)
+            => matchGhostsOnServer > 0 ? "players + flags + match state" : "players + orange";
 
         /// <summary>
         /// The server tick the client is currently showing: the newest probe tick when probes exist, else the

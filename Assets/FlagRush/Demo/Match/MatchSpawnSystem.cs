@@ -36,6 +36,7 @@ namespace FlagRush.Demo
                 if (!_states.IsEmpty) em.DestroyEntity(_states);
                 ReviveAll(ref state);
                 DemoStats.FlagsOnServer = 0;
+                DemoStats.MatchStatesOnServer = 0;
                 DemoStats.RedPlayersOnServer = 0;
                 DemoStats.BluePlayersOnServer = 0;
                 return;
@@ -77,6 +78,7 @@ namespace FlagRush.Demo
                 else blue++;
             }
             DemoStats.FlagsOnServer = _flags.CalculateEntityCount();
+            DemoStats.MatchStatesOnServer = _states.CalculateEntityCount();
             DemoStats.RedPlayersOnServer = red;
             DemoStats.BluePlayersOnServer = blue;
         }

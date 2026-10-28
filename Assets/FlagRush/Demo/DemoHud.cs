@@ -138,8 +138,9 @@ namespace FlagRush.Demo
             bool? burstOk = HudVerdicts.Burst(agents, DemoStats.SwarmFrames, DemoStats.SwarmJobRanManaged);
             bool? threadsOk = HudVerdicts.Threads(agents, DemoStats.SwarmJobThreadsSeen);
             bool connOk = DemoStats.ClientInGame;
-            bool ghostsOk = HudVerdicts.Ghosts(DemoStats.GhostsOnClient, DemoStats.GhostTarget, DemoStats.PlayersOnServer, DemoStats.NewestReplicatedTick);
-            int expectedGhosts = HudVerdicts.ExpectedGhosts(DemoStats.GhostTarget, DemoStats.PlayersOnServer);
+            int matchGhosts = DemoStats.FlagsOnServer + DemoStats.MatchStatesOnServer;
+            bool ghostsOk = HudVerdicts.Ghosts(DemoStats.GhostsOnClient, DemoStats.GhostTarget, DemoStats.PlayersOnServer, DemoStats.NewestReplicatedTick, matchGhosts);
+            int expectedGhosts = HudVerdicts.ExpectedGhosts(DemoStats.GhostTarget, DemoStats.PlayersOnServer, matchGhosts);
             bool subOk = DemoStats.SubSceneEntitiesClient == 3;
 
             float usPerAgent = agents > 0 ? DemoStats.SwarmJobMs * 1000f / agents : 0f;
@@ -160,7 +161,7 @@ namespace FlagRush.Demo
             string snapshotAge = $"{ticksBehind} ticks ({ticksBehind * 1000f / simRate:F0} ms)";
             if (player)
             {
-                CompactPanel(leftW, connOk, ghostsOk, ghostsValue, snapshotAge);
+                CompactPanel(leftW, connOk, ghostsOk, ghostsValue + $"  ({HudVerdicts.GhostsLabel(matchGhosts)})", snapshotAge);
                 if (DemoConfig.IsMatchLevel) Scoreboard(availW);
                 return;
             }
@@ -252,7 +253,7 @@ namespace FlagRush.Demo
 
                 Section("NETWORK", "server → client");
                 CompactRow(connOk, "Connection", ConnectionText(connOk), width);
-                CompactRow(ghostsOk, "Replicated objects", ghostsValue + "  (players + orange)", width);
+                CompactRow(ghostsOk, "Replicated objects", ghostsValue, width);
                 CompactRow(null, "Bandwidth", $"{DemoStats.SnapshotBytesPerSecond / 1024f:F2} KB/s · {DemoStats.AvgSnapshotBytes:F0} B/snapshot", width);
                 CompactRow(null, "Snapshot age", snapshotAge, width);
                 CompactRow(null, "Round trip", $"{DemoStats.EstimatedRttMs:F1} ms", width);
