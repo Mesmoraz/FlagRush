@@ -232,6 +232,38 @@ of prediction: it is a guess, and the server has the last word.
 
 ---
 
+## 6c. Level 4 — the match: rules the server enforces
+
+Open `?level=4`. You are on a team (Red or Blue, whichever has fewer players) with 31 bots by default (add `&bots=149` for the 150-player load test), and the
+same pieces as Level 3 now carry a game: two bases at x = ±25, eight boxes that block movement and
+shots, one flag per team, and a scoreboard (Red score, round clock, Blue score) at the top.
+
+| Rule | What happens |
+|---|---|
+| Take | walk within 1.2 m of the enemy flag (or a dropped one) and it is yours; you cannot sprint while carrying |
+| Capture | bring it inside your own base while your own flag is home: +1 for your team |
+| Drop and return | a carrier who dies drops the flag where they fell; a team-mate touching their own dropped flag returns it, otherwise it goes home after 10 s |
+| Shoot | hold the mouse (right trigger on a gamepad): 4 shots/s along your aim, 40 m range, blocked by boxes, no friendly fire |
+| Health | 100 health, 34 per hit, so 3 hits kill; you respawn in your team's spawn strip after 5 s |
+| Round | first to 3 captures or 5 minutes; then 5 s of banner, and everything resets |
+
+**Shots are decided by the server.** Your client draws a tracer at once, but whether it hit is the
+server's call, made on its own copy of the world. There is no lag compensation yet, so at high latency you
+aim at where the server has the target now, not where you saw it. Bots use the same rules and the same
+input path as you.
+
+**Four extra panel rows:** *Flags* (home / carried / dropped), *You* (kills / deaths / captures),
+*Shots resolved on server* (shots per second across all players) and *Fire → server confirm* (ms from
+pressing fire to the snapshot that counts that shot). *Replicated objects* now counts the two flag ghosts
+and the match-state ghost as well as the players.
+
+**What to expect at 150 players.** The midfield is a meat-grinder: the server resolves 47-135 shots per second and a
+flag carrier usually dies within a second or two of the pickup, so captures are rare (bots attack in
+waves along two lanes to keep flags moving at all). With 11 players (`?level=4&bots=10`) an Editor run with the current
+code measured 3 captures in one 5-minute round. At 150 players this level is mostly a load test for the netcode.
+
+---
+
 ## 7. Why each experiment mattered (and what "PASS" means)
 
 **(a) Burst + worker threads.** Burst is Unity's compiler that turns C# jobs into fast native code.
@@ -304,6 +336,7 @@ Assets/FlagRush/Demo/
   DemoStats.cs              the shared numbers the panel reads
   DemoConfig.cs             ?agents= / ?ghosts= knobs
   NetStatsSystem.cs          measures bytes and packets actually crossing the transport
+  Match/                     Level 4: arena, flag/combat/round rules, bot brain, match systems
   Sandbox.cs                 the live knobs (Level 2)
   SandboxSystems.cs          applies the knobs: simulator stage, interpolation, tick rate, disconnect
   Tests/DemoGateTests.cs    the same PASS/FAIL checks as an automated test

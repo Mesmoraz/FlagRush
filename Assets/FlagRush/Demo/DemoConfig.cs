@@ -11,7 +11,7 @@ namespace FlagRush.Demo
     {
         public const int DefaultAgents = 150;
         public const int DefaultGhosts = 8;
-        public const int MaxLevel = 3;
+        public const int MaxLevel = 4;
         public const int DefaultBots = 31;
 
         static int? _agents, _ghosts, _level, _bots;
@@ -22,11 +22,12 @@ namespace FlagRush.Demo
         public static int Bots => _bots ??= Read("bots", DefaultBots, 0, Sandbox.MaxBots);
 
         public static bool IsPlayerLevel => Level >= 3;
+        public static bool IsMatchLevel => Level >= 4;
 
         /// <summary>Test hook: force the level (null = re-read URL/args on next access) and re-apply sandbox defaults.</summary>
         public static void OverrideLevel(int? level)
         {
-            _level = level;
+            _level = level.HasValue ? Mathf.Clamp(level.Value, 1, MaxLevel) : (int?)null;
             Sandbox.ApplyLevelDefaults();
         }
 

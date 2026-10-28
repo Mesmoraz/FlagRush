@@ -55,10 +55,70 @@ namespace FlagRush.Demo
         public static float CommandAgeMs;         // client: CommandAgeTicks at the simulation tick rate
         public static float MispredictionMeters;  // client: |ServerPosition - predicted position at the last received snapshot tick|; 0 with prediction off
 
+        // ---- match (Level 4)
+        public static int FlagsOnServer;          // flag ghosts alive on the server
+        public static int MatchStatesOnServer;    // match-state ghosts alive on the server (1 at Level 4, else 0)
+        public static int FlagsOnClient;          // flag ghosts the client has received
+        public static bool MatchStateOnClient;    // client has received the match-state ghost
+        public static int RedPlayersOnServer;     // server players with Combatant.Team == 0
+        public static int BluePlayersOnServer;    // server players with Combatant.Team == 1
+        public static float ShotsPerSecond;       // server: shots resolved per second across all players (1 s window)
+        public static float FireConfirmMs;        // client: ms from the latest fire press to the snapshot whose ShotsFired includes it (0 = no sample yet)
+        public static short MatchRedScore;        // client: match-state ghost scores
+        public static short MatchBlueScore;
+        public static bool MatchEnded;            // client: match phase is Ended
+        public static uint MatchTicksLeft;        // client: round ticks left (0 once ended)
+        public static short YouKills;             // client: owned player's MatchStats
+        public static short YouDeaths;
+        public static short YouCaptures;
+        public static string RedFlagLine = "";    // client: MatchHudText.FlagLine for each flag
+        public static string BlueFlagLine = "";
+        public static readonly MatchEventRing LastMatchEvents = new MatchEventRing(16); // server: the newest match events
+        public static readonly int[] MatchEventTotals = new int[System.Enum.GetValues(typeof(MatchEventKind)).Length]; // server: events per MatchEventKind since the match level started (the ring above keeps only 16); sized from the enum
+
         // ---- rendering
         public static int DrawnInstances;
         public static int DrawCalls;
 
         public static string LastError = "";
+    }
+
+    /// <summary>Fixed-size ring of the newest <see cref="MatchEvent"/>s; index 0 is the oldest kept.</summary>
+    public sealed class MatchEventRing
+    {
+        readonly MatchEvent[] _items;
+        int _start;
+
+        public MatchEventRing(int capacity) => _items = new MatchEvent[capacity];
+
+        public int Capacity => _items.Length;
+        public int Count { get; private set; }
+
+        public MatchEvent this[int index] => _items[(_start + index) % _items.Length];
+
+        public void Add(MatchEvent e)
+        {
+            if (Count < _items.Length)
+            {
+                _items[(_start + Count) % _items.Length] = e;
+                Count++;
+                return;
+            }
+            _items[_start] = e;
+            _start = (_start + 1) % _items.Length;
+        }
+
+        public void Clear()
+        {
+            _start = 0;
+            Count = 0;
+        }
+
+        public MatchEvent[] ToArray()
+        {
+            var copy = new MatchEvent[Count];
+            for (int i = 0; i < Count; i++) copy[i] = this[i];
+            return copy;
+        }
     }
 }

@@ -56,6 +56,41 @@ Netcode uses the measured RTT (simulator delay included). Above `ClientTickRate.
 delay. The PlayMode gate `PredictionStaysAheadAtSatelliteLatency` measures a 605 ms RTT with the client
 12 ticks ahead of the server.
 
+## Level 4 — Match: 150 players
+
+Measured in the Claude desktop browser (Chromium) on the WebGL2 build at `?level=4&bots=149` (150 players),
+LAN link, rebuilt at the final match code. The pane stayed visible throughout; readings taken after it
+auto-hid are throttled and were discarded.
+
+| Measure | Browser (WebGL2, LAN link) |
+|---|---|
+| Replicated objects | 153 / 153 PASS (150 players + 2 flags + 1 match state) |
+| Frame time | 6.1 ms at 30 s, 128 s and 295 s (flat; target 16.7 ms met) |
+| Tick rate | 60 ticks/s |
+| Snapshot bandwidth | 22.5 KB/s at 30 s, 22.7 KB/s at 128 s, 30.4-39 KB/s late in the round; 368-670 B per snapshot |
+| Snapshot age / round trip / command age | 1-2 ticks / 12-15 ms / 4 ticks |
+| Misprediction | 0.000 m |
+| Shots resolved on server | 47-135/s |
+| Round | one full round: Red 1 - 1 Blue at 2:54, ended Red 1 - 2 Blue (3 captures), then reset to 0-0 and 5:00 |
+
+4G preset (60 ms +/-20 ms one way, 2 % loss), from the earlier build; no netcode change since:
+RTT 119-131 ms, command age 10-12 ticks, misprediction 0.000 m, 41-47 KB/s at about 930-1040 B per
+snapshot, frame time 6.0-6.1 ms. **Fire to server confirm: 157 ms** (held press).
+
+Not verified:
+- The end-of-round banner was not caught on screen; the reset happened inside the 10 s sampling gap.
+- Captures at 150 players are a single run: 3 in the browser, 0 in Editor diagnostics at 149 bots (159
+  takes in 300 s). Treat them as rare, not as a rate.
+- The fire-to-confirm figure comes from the earlier build (instant synthetic clicks do not register, so a
+  held press was used) and was not re-measured on the final one.
+- Visuals checked at the earlier build: boxes, bases, scoreboard and clock, white ring, team colours,
+  hit flash. Real gamepad aiming was not tried.
+- Shots have no lag compensation; the 157 ms is the round trip a hit takes to become real, not a
+  correction for it.
+
+Editor, not browser: frame time was flat over 300 s (0.7-1.2 ms) with 149 bots, so the early suspicion of
+frame-time growth over minutes was not reproduced.
+
 ## Decisions confirmed
 
 - **Stay on Netcode for Entities** (no fallback to Netcode for GameObjects needed).

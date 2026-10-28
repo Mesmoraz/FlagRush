@@ -3,6 +3,7 @@
     "rootNamespace": "FlagRush.Demo.Tests",
     "references": [
         "FlagRush.Demo",
+        "FlagRush.Domain",
         "Unity.Mathematics",
         "Unity.Entities",
         "Unity.Collections",

@@ -20,6 +20,8 @@ Open the **Sandbox** tab (`?level=2`) for live controls: latency/jitter/loss, ti
 
 Open the **Player** tab (`?level=3`) to drive a green cube with WASD or a gamepad (click the game first), with bots on the same input path, a prediction on/off toggle and live prediction readouts.
 
+Open the **Match** tab (`?level=4`) to play capture the flag against 31 bots by default (add `&bots=149` for the 150-player load test): WASD to move, hold the mouse (or right trigger) to shoot, take the enemy flag home. Hits are decided by the server, with no lag compensation yet.
+
 ## What the numbers mean
 
 | Panel row | Typical value | It means |
@@ -49,8 +51,11 @@ Values above were measured in Chromium on a 20-core Windows machine; see
 | 2 | Web de-risk spike: Entities + Burst + Netcode for Entities in the browser — all gates pass, published | done |
 | 2b | Sandbox: live knobs for counts, tick rate, link latency/jitter/loss, interpolation, freeze/kill ([roadmap](docs/roadmap.md)) | done |
 | 3 | Player: WASD-controlled predicted ghost, bots on the same input path | done |
-| 4 | Dedicated server (UDP + WebSocket) + browser/native clients in one match | planned |
-| 5 | itch.io publish | planned |
+| 4a | Match loop: two teams, carryable flags, hitscan + health, code-defined arena, 149 bots, scoreboard | done |
+| 4b | Profiles / XP / disconnect-and-come-back button | planned |
+| 4c | Relevancy readout (ghosts culled by distance) | planned |
+| 5 | Dedicated server (UDP + WebSocket) + browser/native clients in one match | planned |
+| 6 | itch.io publish | planned |
 
 ## Layout
 

@@ -4,11 +4,13 @@ using Unity.NetCode;
 
 namespace FlagRush.Demo
 {
-    /// <summary>Per-tick player command: movement stick (XZ plane) and sprint.</summary>
+    /// <summary>Per-tick player command: movement stick (XZ plane), sprint, aim direction (XZ) and fire.</summary>
     public struct PlayerInput : IInputComponentData
     {
         public float2 Move;
         public bool Sprint;
+        public float2 Aim;
+        public bool Fire;
     }
 
     /// <summary>Replicated player state. Predicted on the owning client, interpolated on everyone else.</summary>

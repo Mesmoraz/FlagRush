@@ -10,7 +10,7 @@ namespace FlagRush.Demo.Tests
             float3 pos = float3.zero;
             float2 vel = float2.zero;
             var arena = ArenaBounds.Default;
-            for (int i = 0; i < ticks; i++) PlayerMotion.Step(ref pos, ref vel, input, dt, arena);
+            for (int i = 0; i < ticks; i++) PlayerMotion.Step(ref pos, ref vel, input, dt, arena, ArenaLayout.Empty);
             return (pos, vel);
         }
 
@@ -44,8 +44,8 @@ namespace FlagRush.Demo.Tests
             float2 vel = float2.zero;
             var arena = ArenaBounds.Default;
             var go = new PlayerInput { Move = new float2(1, 0) };
-            for (int i = 0; i < 120; i++) PlayerMotion.Step(ref pos, ref vel, go, 1f / 60f, arena);
-            for (int i = 0; i < 60; i++) PlayerMotion.Step(ref pos, ref vel, default, 1f / 60f, arena);
+            for (int i = 0; i < 120; i++) PlayerMotion.Step(ref pos, ref vel, go, 1f / 60f, arena, ArenaLayout.Empty);
+            for (int i = 0; i < 60; i++) PlayerMotion.Step(ref pos, ref vel, default, 1f / 60f, arena, ArenaLayout.Empty);
             Assert.That(vel, Is.EqualTo(float2.zero));
         }
 
@@ -55,6 +55,18 @@ namespace FlagRush.Demo.Tests
             var (pos, vel) = Run(new PlayerInput { Move = new float2(1, 0) }, 600);
             Assert.That(pos.x, Is.EqualTo(30f - PlayerTuning.Radius));
             Assert.That(vel.x, Is.EqualTo(0f));
+        }
+
+        [Test]
+        public void StepWithMatchLayoutStopsAtBox()
+        {
+            float3 pos = new float3(8f, 0f, 0f);
+            float2 vel = float2.zero;
+            var arena = ArenaBounds.Default;
+            var layout = ArenaLayout.Match;
+            var input = new PlayerInput { Move = new float2(1, 0), Sprint = true };
+            for (int i = 0; i < 120; i++) PlayerMotion.Step(ref pos, ref vel, input, 1f / 60f, arena, layout);
+            Assert.That(pos.x, Is.LessThanOrEqualTo(11f - PlayerTuning.Radius + 1e-4f));
         }
 
         [Test]
@@ -76,7 +88,7 @@ namespace FlagRush.Demo.Tests
             for (int i = 0; i < 300; i++)
             {
                 var input = new PlayerInput { Move = rng.NextFloat2(-1f, 1f), Sprint = rng.NextBool() };
-                PlayerMotion.Step(ref pos, ref vel, input, 1f / 60f, arena);
+                PlayerMotion.Step(ref pos, ref vel, input, 1f / 60f, arena, ArenaLayout.Empty);
             }
             return pos;
         }

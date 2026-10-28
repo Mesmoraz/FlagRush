@@ -31,6 +31,14 @@ namespace FlagRush.Demo
         public static readonly Color OwnedColor = new Color(0.3f, 1f, 0.4f);
         public static readonly Color OtherColor = new Color(0.78f, 0.8f, 0.82f);
         public static readonly Color OutlineColor = new Color(0.3f, 1f, 0.4f, 0.35f);
+        public static readonly Color TeamRed = new Color(0.9f, 0.3f, 0.3f);
+        public static readonly Color TeamBlue = new Color(0.3f, 0.5f, 1f);
+        public static readonly Color BoxColor = new Color(0.22f, 0.23f, 0.26f);
+        public static readonly Color TracerColor = new Color(1f, 0.92f, 0.2f);
+        public const float TracerSeconds = 0.05f;
+        static readonly Vector3 RingScale = new Vector3(1.8f, 0.05f, 1.8f);
+        static readonly Vector3 DiscScale = new Vector3(6f, 0.05f, 6f);
+        static readonly Vector3 FlagScale = new Vector3(0.3f, 2f, 0.3f);
         static readonly Color OutlineOpaqueFallback = new Color(0.15f, 0.5f, 0.2f);
 
         struct InstanceData
@@ -49,6 +57,17 @@ namespace FlagRush.Demo
         EntityQuery _ownedQuery;
         EntityQuery _otherQuery;
 
+        // Level 4 (match) draws
+        Material _redMaterial, _blueMaterial, _whiteMaterial, _boxMaterial, _redDiscMaterial, _blueDiscMaterial, _tracerMaterial;
+        EntityQuery _matchOwnedQuery;
+        EntityQuery _matchOtherQuery;
+        EntityQuery _flagQuery;
+        bool _tracerGateArmed;
+        uint _lastTracerTick;
+        float _tracerUntil;
+        InstanceData _tracer;
+        MatchHudText.HitLatch _ownedHit;
+
         protected override void OnCreate()
         {
             _mesh = Resources.GetBuiltinResource<Mesh>("Cube.fbx");
@@ -63,6 +82,13 @@ namespace FlagRush.Demo
             _ownedMaterial = Instanced(baseMaterial, OwnedColor);
             _otherMaterial = Instanced(baseMaterial, OtherColor);
             _outlineMaterial = CreateOutlineMaterial(baseMaterial);
+            _redMaterial = Instanced(baseMaterial, TeamRed);
+            _blueMaterial = Instanced(baseMaterial, TeamBlue);
+            _whiteMaterial = Instanced(baseMaterial, Color.white);
+            _boxMaterial = Instanced(baseMaterial, BoxColor);
+            _tracerMaterial = Instanced(baseMaterial, TracerColor);
+            _redDiscMaterial = CreateTranslucentMaterial(baseMaterial, new Color(TeamRed.r, TeamRed.g, TeamRed.b, 0.35f), TeamRed * 0.5f);
+            _blueDiscMaterial = CreateTranslucentMaterial(baseMaterial, new Color(TeamBlue.r, TeamBlue.g, TeamBlue.b, 0.35f), TeamBlue * 0.5f);
 
             _swarmQuery = GetEntityQuery(ComponentType.ReadOnly<SwarmAgent>(), ComponentType.ReadOnly<LocalToWorld>());
             _ghostQuery = GetEntityQuery(ComponentType.ReadOnly<ProbeGhost>(), ComponentType.ReadOnly<LocalToWorld>());
@@ -74,6 +100,14 @@ namespace FlagRush.Demo
                 All = new[] { ComponentType.ReadOnly<PlayerGhost>(), ComponentType.ReadOnly<LocalTransform>() },
                 Disabled = new[] { ComponentType.ReadOnly<GhostOwnerIsLocal>() },
             });
+            _matchOwnedQuery = GetEntityQuery(ComponentType.ReadOnly<PlayerGhost>(), ComponentType.ReadOnly<LocalTransform>(),
+                ComponentType.ReadOnly<Combatant>(), ComponentType.ReadOnly<PlayerInput>(), ComponentType.ReadOnly<GhostOwnerIsLocal>());
+            _matchOtherQuery = GetEntityQuery(new EntityQueryDesc
+            {
+                All = new[] { ComponentType.ReadOnly<PlayerGhost>(), ComponentType.ReadOnly<LocalTransform>(), ComponentType.ReadOnly<Combatant>() },
+                Disabled = new[] { ComponentType.ReadOnly<GhostOwnerIsLocal>() },
+            });
+            _flagQuery = GetEntityQuery(ComponentType.ReadOnly<FlagGhost>());
         }
 
         static Material Instanced(Material source, Color color)
@@ -87,11 +121,14 @@ namespace FlagRush.Demo
         /// the base material to URP's transparent surface type; if the shader has no transparent mode, a dimmer opaque green.
         /// </summary>
         static Material CreateOutlineMaterial(Material baseMaterial)
+            => CreateTranslucentMaterial(baseMaterial, OutlineColor, OutlineOpaqueFallback);
+
+        static Material CreateTranslucentMaterial(Material baseMaterial, Color color, Color opaqueFallback)
         {
             var asset = Resources.Load<Material>("DemoOutlineMaterial");
-            if (asset != null) return Instanced(asset, OutlineColor);
-            var material = Instanced(baseMaterial, OutlineColor);
-            if (!MakeTransparent(material)) material.color = OutlineOpaqueFallback;
+            if (asset != null) return Instanced(asset, color);
+            var material = Instanced(baseMaterial, color);
+            if (!MakeTransparent(material)) material.color = opaqueFallback;
             return material;
         }
 
@@ -116,8 +153,15 @@ namespace FlagRush.Demo
         {
             DemoStats.DrawCalls = 0;
             int drawn = Draw(_swarmQuery, _swarmMaterial) + Draw(_ghostQuery, _ghostMaterial);
-            drawn += DrawPlayers(_ownedQuery, _ownedMaterial);
-            drawn += DrawPlayers(_otherQuery, _otherMaterial);
+            if (DemoConfig.IsMatchLevel)
+            {
+                drawn += DrawMatch();
+            }
+            else
+            {
+                drawn += DrawPlayers(_ownedQuery, _ownedMaterial);
+                drawn += DrawPlayers(_otherQuery, _otherMaterial);
+            }
             if (Sandbox.PredictionEnabled) drawn += DrawOutline();
             DemoStats.DrawnInstances = drawn;
         }
@@ -144,15 +188,131 @@ namespace FlagRush.Demo
             return count;
         }
 
+        /// <summary>
+        /// Level 4: team-coloured players (white while hit-flashing, none while dead), the owned player's white ring,
+        /// boxes, base discs, flags and the owned player's tracer. One draw per material.
+        /// </summary>
+        int DrawMatch()
+        {
+            uint ownedTick = SystemAPI.TryGetSingleton<NetworkTime>(out var time) && time.ServerTick.IsValid
+                ? time.ServerTick.TickIndexForValidTick : 0u;
+            var layout = SystemAPI.TryGetSingleton<ActiveArena>(out var arena) && arena.Match ? arena.Layout : ArenaLayout.Empty;
+
+            var red = new NativeList<InstanceData>(16, Allocator.Temp);
+            var blue = new NativeList<InstanceData>(16, Allocator.Temp);
+            var white = new NativeList<InstanceData>(16, Allocator.Temp);
+            var boxes = new NativeList<InstanceData>(16, Allocator.Temp);
+            var redDisc = new NativeList<InstanceData>(1, Allocator.Temp);
+            var blueDisc = new NativeList<InstanceData>(1, Allocator.Temp);
+            var tracer = new NativeList<InstanceData>(1, Allocator.Temp);
+
+            using (var transforms = _matchOwnedQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp))
+            using (var combatants = _matchOwnedQuery.ToComponentDataArray<Combatant>(Allocator.Temp))
+            using (var inputs = _matchOwnedQuery.ToComponentDataArray<PlayerInput>(Allocator.Temp))
+            {
+                for (int i = 0; i < transforms.Length; i++)
+                {
+                    if (!combatants[i].Alive) continue;
+                    float3 pos = transforms[i].Position;
+                    bool flash = MatchHudText.OwnedHitFlash(ref _ownedHit, combatants[i].LastHitTick, UnityEngine.Time.realtimeSinceStartup);
+                    AddPlayer(combatants[i], pos, flash, red, blue, white);
+                    white.Add(Instance(new Vector3(pos.x, 0.02f, pos.z), RingScale));
+                    UpdateTracer(inputs[i], pos, ownedTick, layout);
+                }
+            }
+            if (UnityEngine.Time.realtimeSinceStartup < _tracerUntil) tracer.Add(_tracer);
+
+            uint interpTick = DemoStats.ClientInterpolationTick;
+            using (var transforms = _matchOtherQuery.ToComponentDataArray<LocalTransform>(Allocator.Temp))
+            using (var combatants = _matchOtherQuery.ToComponentDataArray<Combatant>(Allocator.Temp))
+            {
+                for (int i = 0; i < transforms.Length; i++)
+                    if (combatants[i].Alive) AddPlayer(combatants[i], transforms[i].Position, MatchHudText.IsHitFlash(interpTick, combatants[i].LastHitTick), red, blue, white);
+            }
+
+            using (var flags = _flagQuery.ToComponentDataArray<FlagGhost>(Allocator.Temp))
+            {
+                for (int i = 0; i < flags.Length; i++)
+                {
+                    var p = flags[i].Position;
+                    var list = flags[i].Team == 0 ? red : blue;
+                    list.Add(Instance(new Vector3(p.x, p.y + 1f, p.z), FlagScale));
+                }
+            }
+
+            for (int i = 0; i < layout.Boxes.Length; i++)
+            {
+                var b = layout.Boxes[i];
+                boxes.Add(Instance(new Vector3(b.Center.x, 1f, b.Center.y), new Vector3(b.HalfExtents.x * 2f, 2f, b.HalfExtents.y * 2f)));
+            }
+            redDisc.Add(Instance(new Vector3(layout.RedBase.x, 0.025f, layout.RedBase.y), DiscScale));
+            blueDisc.Add(Instance(new Vector3(layout.BlueBase.x, 0.025f, layout.BlueBase.y), DiscScale));
+
+            int count = 0;
+            count += Flush(boxes, _boxMaterial);
+            count += Flush(redDisc, _redDiscMaterial);
+            count += Flush(blueDisc, _blueDiscMaterial);
+            count += Flush(red, _redMaterial);
+            count += Flush(blue, _blueMaterial);
+            count += Flush(white, _whiteMaterial);
+            count += Flush(tracer, _tracerMaterial);
+            return count;
+        }
+
+        static void AddPlayer(in Combatant c, float3 pos, bool flash, NativeList<InstanceData> red, NativeList<InstanceData> blue, NativeList<InstanceData> white)
+        {
+            var instance = PlayerInstance(pos);
+            if (flash) white.Add(instance);
+            else if (c.Team == 0) red.Add(instance);
+            else blue.Add(instance);
+        }
+
+        /// <summary>Starts a tracer when the owned player fires and the local gate (15 client ticks) allows it.</summary>
+        void UpdateTracer(in PlayerInput input, float3 pos, uint tick, in ArenaLayout layout)
+        {
+            if (!input.Fire || math.lengthsq(input.Aim) < 1e-6f) return;
+            if (_tracerGateArmed && tick - _lastTracerTick < MatchTuning.FireIntervalTicks) return;
+            _tracerGateArmed = true;
+            _lastTracerTick = tick;
+
+            float2 dir = math.normalize(input.Aim);
+            float2 a = pos.xz;
+            float2 b = a + dir * MatchTuning.ShotRange;
+            float length = MatchTuning.ShotRange;
+            if (Obstacles.SegmentHit(a, b, layout, out float t, out _)) length *= t;
+            var d3 = new Vector3(dir.x, 0f, dir.y);
+            var mid = new Vector3(a.x, 1f, a.y) + d3 * (length * 0.5f);
+            _tracer = new InstanceData { objectToWorld = Matrix4x4.TRS(mid, Quaternion.LookRotation(d3), new Vector3(0.08f, 0.08f, length)) };
+            _tracerUntil = UnityEngine.Time.realtimeSinceStartup + TracerSeconds;
+        }
+
+        static InstanceData Instance(Vector3 position, Vector3 scale)
+            => new InstanceData { objectToWorld = Matrix4x4.TRS(position, Quaternion.identity, scale) };
+
+        int Flush(NativeList<InstanceData> list, Material material)
+        {
+            int count = list.Length;
+            if (count > 0) Submit(list.AsArray(), material);
+            list.Dispose();
+            return count;
+        }
+
         int DrawOutline()
         {
             var positions = _ownedQuery.ToComponentDataArray<ServerPosition>(Allocator.Temp);
-            var instances = new NativeArray<InstanceData>(positions.Length, Allocator.Temp);
+            var entities = _ownedQuery.ToEntityArray(Allocator.Temp);
+            var instances = new NativeList<InstanceData>(positions.Length, Allocator.Temp);
+            bool match = DemoConfig.IsMatchLevel;
             for (int i = 0; i < positions.Length; i++)
-                instances[i] = PlayerInstance(positions[i].Value);
-            Submit(instances, _outlineMaterial);
+            {
+                // Level 4: a dead owned player is not drawn, and neither is its server outline.
+                if (match && EntityManager.HasComponent<Combatant>(entities[i]) && !EntityManager.GetComponentData<Combatant>(entities[i]).Alive) continue;
+                instances.Add(PlayerInstance(positions[i].Value));
+            }
+            Submit(instances.AsArray(), _outlineMaterial);
             int count = instances.Length;
             positions.Dispose();
+            entities.Dispose();
             instances.Dispose();
             return count;
         }

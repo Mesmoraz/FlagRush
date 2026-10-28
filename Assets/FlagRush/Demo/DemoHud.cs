@@ -138,8 +138,9 @@ namespace FlagRush.Demo
             bool? burstOk = HudVerdicts.Burst(agents, DemoStats.SwarmFrames, DemoStats.SwarmJobRanManaged);
             bool? threadsOk = HudVerdicts.Threads(agents, DemoStats.SwarmJobThreadsSeen);
             bool connOk = DemoStats.ClientInGame;
-            bool ghostsOk = HudVerdicts.Ghosts(DemoStats.GhostsOnClient, DemoStats.GhostTarget, DemoStats.PlayersOnServer, DemoStats.NewestReplicatedTick);
-            int expectedGhosts = HudVerdicts.ExpectedGhosts(DemoStats.GhostTarget, DemoStats.PlayersOnServer);
+            int matchGhosts = DemoStats.FlagsOnServer + DemoStats.MatchStatesOnServer;
+            bool ghostsOk = HudVerdicts.Ghosts(DemoStats.GhostsOnClient, DemoStats.GhostTarget, DemoStats.PlayersOnServer, DemoStats.NewestReplicatedTick, matchGhosts);
+            int expectedGhosts = HudVerdicts.ExpectedGhosts(DemoStats.GhostTarget, DemoStats.PlayersOnServer, matchGhosts);
             bool subOk = DemoStats.SubSceneEntitiesClient == 3;
 
             float usPerAgent = agents > 0 ? DemoStats.SwarmJobMs * 1000f / agents : 0f;
@@ -160,7 +161,8 @@ namespace FlagRush.Demo
             string snapshotAge = $"{ticksBehind} ticks ({ticksBehind * 1000f / simRate:F0} ms)";
             if (player)
             {
-                CompactPanel(leftW, connOk, ghostsOk, ghostsValue, snapshotAge);
+                CompactPanel(leftW, connOk, ghostsOk, ghostsValue + $"  ({HudVerdicts.GhostsLabel(matchGhosts)})", snapshotAge);
+                if (DemoConfig.IsMatchLevel) Scoreboard(availW);
                 return;
             }
 
@@ -196,7 +198,7 @@ namespace FlagRush.Demo
             GUILayout.Space(8);
             GUILayout.Label(sandbox
                 ? $"<color=#{Hex(Dim)}>Level 1 shows the readouts; this level lets you cause them. Source: github.com/Mesmoraz/FlagRush</color>"
-                : $"<color=#{Hex(Dim)}>Push it: add <b>?agents=5000&amp;ghosts=200</b> to the URL, open <b>?level=2</b> for live controls, or <b>?level=3</b> to drive a player.  Source: github.com/Mesmoraz/FlagRush</color>", _meaning, GUILayout.Width(leftW - 30f));
+                : $"<color=#{Hex(Dim)}>Push it: add <b>?agents=5000&amp;ghosts=200</b> to the URL, open <b>?level=2</b> for live controls, <b>?level=3</b> to drive a player, or <b>?level=4</b> for the match.  Source: github.com/Mesmoraz/FlagRush</color>", _meaning, GUILayout.Width(leftW - 30f));
             if (!string.IsNullOrEmpty(DemoStats.LastError)) GUILayout.Label($"<color=#{Hex(Fail)}>note: {DemoStats.LastError}</color>", _meaning);
             GUILayout.EndArea();
         }
@@ -206,7 +208,20 @@ namespace FlagRush.Demo
 
         // ---------------------------------------------------------------- Level 3: compact panel
 
-        float _compactHeight = 560f; // measured from the laid-out content on each repaint
+        static float _compactHeightRef = 560f; // measured from the laid-out content on each repaint
+        float _compactHeight { get => _compactHeightRef; set => _compactHeightRef = value; }
+
+        /// <summary>True when a screen-pixel point (origin bottom-left, as the mouse reports it) is over the left readout panel (its hide button included) or the control panel.</summary>
+        public static bool IsOverPanel(Vector2 screenPos)
+        {
+            float scale = Scale;
+            if (scale <= 0f) return false;
+            if (DemoConfig.Level >= 2 && screenPos.x >= ControlPanelLeft) return true;
+            if (!DemoConfig.IsPlayerLevel) return false;
+            float x = screenPos.x / scale, y = (Screen.height - screenPos.y) / scale;
+            float w = LeftWidthRef(Screen.width / scale), h = Collapsed ? 46f : _compactHeightRef;
+            return x >= Margin && x <= Margin + w && y >= Margin && y <= Margin + h;
+        }
 
         void CompactRow(bool? pass, string label, string value, float width)
         {
@@ -227,7 +242,7 @@ namespace FlagRush.Demo
             float height = Collapsed ? 46f : _compactHeight;
             GUILayout.BeginArea(new Rect(Margin, Margin, width, height), _box);
             GUILayout.BeginHorizontal();
-            GUILayout.Label($"FlagRush  <color=#{Hex(Dim)}>level 3 · player</color>", _title);
+            GUILayout.Label($"FlagRush  <color=#{Hex(Dim)}>{(DemoConfig.IsMatchLevel ? "level 4 · match" : "level 3 · player")}</color>", _title);
             GUILayout.FlexibleSpace();
             if (GUILayout.Button(Collapsed ? "show (H)" : "hide (H)", GUILayout.Width(80))) Collapsed = !Collapsed;
             GUILayout.EndHorizontal();
@@ -238,7 +253,7 @@ namespace FlagRush.Demo
 
                 Section("NETWORK", "server → client");
                 CompactRow(connOk, "Connection", ConnectionText(connOk), width);
-                CompactRow(ghostsOk, "Replicated objects", ghostsValue + "  (players + orange)", width);
+                CompactRow(ghostsOk, "Replicated objects", ghostsValue, width);
                 CompactRow(null, "Bandwidth", $"{DemoStats.SnapshotBytesPerSecond / 1024f:F2} KB/s · {DemoStats.AvgSnapshotBytes:F0} B/snapshot", width);
                 CompactRow(null, "Snapshot age", snapshotAge, width);
                 CompactRow(null, "Round trip", $"{DemoStats.EstimatedRttMs:F1} ms", width);
@@ -251,12 +266,61 @@ namespace FlagRush.Demo
                 CompactRow(null, "Misprediction", DemoStats.OwnedPlayerPredicted ? $"{DemoStats.MispredictionMeters:F3} m" : "— (prediction off)", width);
                 CompactRow(null, "Players (srv / client)", $"{DemoStats.PlayersOnServer} / {DemoStats.PlayersOnClient} ({DemoStats.BotsOnServer} bots)", width);
 
+                if (DemoConfig.IsMatchLevel) MatchRows(width);
+
                 GUILayout.Space(8);
-                GUILayout.Label($"<color=#{Hex(Dim)}>Click the game, then WASD. Try: 200 ms latency, uncheck Prediction, walk into a bot. H hides this panel.  Source: github.com/Mesmoraz/FlagRush</color>", _meaning, GUILayout.Width(width - 30f));
+                GUILayout.Label($"<color=#{Hex(Dim)}>{(DemoConfig.IsMatchLevel ? "Click the game, WASD to move, aim with the mouse, hold left click to fire (3 hits kill). Take the enemy flag home." : "Click the game, then WASD.")} Try: 200 ms latency, uncheck Prediction, walk into a bot. H hides this panel.  Source: github.com/Mesmoraz/FlagRush</color>", _meaning, GUILayout.Width(width - 30f));
                 if (!string.IsNullOrEmpty(DemoStats.LastError)) GUILayout.Label($"<color=#{Hex(Fail)}>note: {DemoStats.LastError}</color>", _meaning, GUILayout.Width(width - 30f));
                 if (Event.current.type == EventType.Repaint) _compactHeight = GUILayoutUtility.GetLastRect().yMax + 16f;
             }
             GUILayout.EndArea();
+        }
+
+        // ---------------------------------------------------------------- Level 4: match readouts
+
+        /// <summary>A compact row followed by its one-line meaning, in the panel's existing style.</summary>
+        void MatchRow(string label, string value, string meaning, float width)
+        {
+            CompactRow(null, label, value, width);
+            GUILayout.Label("→ " + meaning, _meaning, GUILayout.Width(width - 30f));
+        }
+
+        void MatchRows(float width)
+        {
+            Section("MATCH", "who is winning, and can you trust a hit?");
+            MatchRow("Flags", $"Red: {DemoStats.RedFlagLine} · Blue: {DemoStats.BlueFlagLine}",
+                "each flag's state: home / carried by you / carried / dropped, with seconds to auto-return", width);
+            MatchRow("You", $"{DemoStats.YouKills} kills / {DemoStats.YouDeaths} deaths / {DemoStats.YouCaptures} captures",
+                "kills, deaths and flag captures since you joined (the totals survive a round reset)", width);
+            MatchRow("Shots resolved on server", $"{DemoStats.ShotsPerSecond:F1} / s",
+                "shots per second across all players; every hit is decided by the server", width);
+            MatchRow("Fire → server confirm", DemoStats.FireConfirmMs > 0f ? $"{DemoStats.FireConfirmMs:F0} ms" : "— (fire to measure)",
+                "ms from your fire press to the snapshot whose ShotsFired includes that shot: the round trip a hit takes to become real", width);
+        }
+
+        GUIStyle _score, _banner;
+
+        /// <summary>Top-centre scoreboard (Red score, round clock, Blue score) and the end-of-round banner.</summary>
+        void Scoreboard(float availW)
+        {
+            if (_score == null)
+            {
+                _score = new GUIStyle(GUI.skin.label) { fontSize = 26, fontStyle = FontStyle.Bold, richText = true, alignment = TextAnchor.MiddleCenter };
+                _banner = new GUIStyle(_score) { fontSize = 40 };
+            }
+            const float w = 380f;
+            float scale = Scale;
+            float centre = scale > 0f ? UncoveredBandCentre / scale : availW * 0.5f;
+            string clock = DemoStats.MatchEnded ? "0:00" : MatchHudText.Clock(DemoStats.MatchTicksLeft);
+            GUILayout.BeginArea(new Rect(centre - w * 0.5f, Margin, w, 46f), _box);
+            GUILayout.Label($"<color=#{Hex(InstancedRenderSystem.TeamRed)}>Red {DemoStats.MatchRedScore}</color> — {clock} — <color=#{Hex(InstancedRenderSystem.TeamBlue)}>{DemoStats.MatchBlueScore} Blue</color>", _score);
+            GUILayout.EndArea();
+            if (DemoStats.MatchEnded)
+            {
+                GUILayout.BeginArea(new Rect(centre - w * 0.5f, Margin + 56f, w, 64f), _box);
+                GUILayout.Label(MatchHudText.Banner(DemoStats.MatchRedScore, DemoStats.MatchBlueScore), _banner);
+                GUILayout.EndArea();
+            }
         }
 
         // ---------------------------------------------------------------- Level 2: control panel

@@ -19,6 +19,20 @@ namespace FlagRush.Demo.Tests
         }
 
         [Test]
+        public void Level4CountsFlagAndMatchStateGhosts()
+        {
+            // Level 4 browser case: 0 probe ghosts, 1 human + 149 bots, 2 flags + 1 match state replicated = 153.
+            Assert.That(HudVerdicts.ExpectedGhosts(0, 150, 3), Is.EqualTo(153));
+            Assert.That(HudVerdicts.Ghosts(153, 0, 150, 0, 3), Is.True, "players + flags + match state all replicated is a PASS");
+            Assert.That(HudVerdicts.Ghosts(152, 0, 150, 0, 3), Is.False, "a missing flag or match state is a FAIL");
+            Assert.That(HudVerdicts.Ghosts(150, 0, 150, 0, 3), Is.False, "players only, match ghosts not yet replicated, is a FAIL");
+            Assert.That(HudVerdicts.GhostsLabel(3), Is.EqualTo("players + flags + match state"));
+            // Below Level 4 there are no match ghosts and the row reads exactly as before.
+            Assert.That(HudVerdicts.Ghosts(150, 0, 150, 0, 0), Is.EqualTo(HudVerdicts.Ghosts(150, 0, 150, 0)));
+            Assert.That(HudVerdicts.GhostsLabel(0), Is.EqualTo("players + orange"));
+        }
+
+        [Test]
         public void SnapshotAgeFallsBackToInterpolationTickWithoutProbes()
         {
             Assert.That(HudVerdicts.ShownTick(0, 990), Is.EqualTo(990u));

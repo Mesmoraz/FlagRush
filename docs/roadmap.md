@@ -89,6 +89,12 @@ drives a scripted input and asserts the owned ghost moved on the server.
 
 ## Level 4 — Match: capture the flag and state that survives a disconnect
 
+**Status.** Split into three specs. **4a, the match loop, is live** (`?level=4`): teams, flags, hitscan
+combat, a code-defined arena instead of a SubScene, bots, scoreboard
+([spec](superpowers/specs/2026-10-27-level4a-match-design.md)). **4b** (profiles, XP, the disconnect
+button) and **4c** (the relevancy readout) are later specs; the Adds and Definition of done below still
+apply to them. Shots are server-decided with no lag compensation yet.
+
 **What it proves.** The game loop, built on the Domain contracts: teams, flags (`ICarryable`),
 players (`ICarrier`), `Carries` relationships replicated as ghost fields, a `CaptureTheFlagRuleSet`
 stepping the pure `Step(tick, inputs) → events` contract on the server. And the Rust requirement:
