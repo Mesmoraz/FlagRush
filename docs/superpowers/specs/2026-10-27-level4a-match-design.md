@@ -44,7 +44,7 @@ footprints that block everything (they are taller than players).
 | Red base / flag stand | centre (−25, 0), base radius 3 m |
 | Blue base / flag stand | centre (+25, 0), base radius 3 m |
 | Boxes (centre, half-extents) | (±12, 0) half (1, 5); (0, ±10) half (4, 1); (±20, ±16) half (2, 2) — 8 boxes, symmetric about both axes |
-| Spawn zone | two flank strips behind each base, off the flag stand (Ruling R17): Blue x ∈ [26, 29], Red x ∈ [−29, −26]; |z| ∈ [12, 20], 40 slots per strip (even slots +z, odd −z), golden-ratio x spread like Level 3's `BotPoint` |
+| Spawn zone | two flank strips behind each base, off the flag stand (Ruling R17): Blue x ∈ [26, 29], Red x ∈ [−29, −26]; \|z\| ∈ [12, 20], 40 slots per strip (even slots +z, odd −z), golden-ratio x spread like Level 3's `BotPoint` |
 
 **Flags.** One per team.
 
@@ -65,7 +65,7 @@ footprints that block everything (they are taller than players).
 | Shot | 2D hitscan from the shooter's position along `Aim`, range 40 m, player hit radius `PlayerTuning.Radius` (0.6 m); boxes block; team-mates are ignored (no friendly fire) |
 | Damage | 100 health, 34 per hit → 3 hits kill |
 | Hit flash | target's `LastHitTick` set; client flashes it for 0.15 s |
-| Death | drop flag, `RespawnTick = now + 300` (5 s; was 180, changed with Ruling R17, see spawn-zones-report.md); dead players get zero input and cannot fire, pick up or be hit |
+| Death | drop flag, `RespawnTick = now + 300` (5 s; was 180 s/3 s, changed with Ruling R18); dead players get zero input and cannot fire, pick up or be hit |
 | Respawn | at `RespawnTick`: full health, teleported into own spawn zone |
 
 **Round.** First team to 3 captures, or 18 000 ticks (5 min) → phase `Ended` for 300 ticks (5 s), then a
@@ -139,10 +139,22 @@ still writes `PlayerInput`.
 | Item | Rule |
 |---|---|
 | Role | `BotIndex % 3 == 0` → Defender, otherwise Attacker |
-| State, checked each tick in order | **Return** if carrying → own base. **Hunt** if own flag is carried → its carrier; Defenders also hunt the nearest enemy inside their half. **GoForFlag** otherwise → enemy flag position (Attackers); Defenders with no target hold within 6 m of their own stand |
+| State, checked each tick in order | **Return** if carrying → own base. **Hunt** if own flag is carried and this bot is one of the 4 nearest living enemy bots to the carrier (Ruling R19; the others keep their normal role) → the carrier; Defenders also hunt the nearest enemy inside their half. **GoForFlag** otherwise → enemy flag position (Attackers); Defenders with no target hold within 6 m of their own stand |
 | Steering | straight line to the target; if the segment hits a box, steer to that box's nearest corner pushed out by 1.5 m |
 | Shooting | nearest alive enemy within 25 m with line of sight (`Hitscan` against boxes) → `Aim` toward it rotated by a seeded random ±6°, `Fire = true` |
 | Sprint | when not carrying and target farther than 15 m |
+
+**Four rules added after the first browser run (Ruling R16).** With the rules above, no flag moved in
+4 minutes at 149 bots: both teams' attackers took mirror-image paths, met at midfield and shot each other
+down. A "raider" is an attacker going for a home enemy flag.
+
+1. **Waves.** A raider in its own spawn strip waits for its team's next wave; waves leave during the
+   first 60 ticks of every 600 (one window every 10 s).
+2. **Lanes.** In its own half a raider first heads for its team's midfield lane, Red (0, −14) and Blue
+   (0, +14), then straight for the flag. The lanes are 28 m apart, more than the 25 m fire range.
+3. **Raiders don't shoot attackers.** While the enemy flag is not carried, a raider shoots only
+   defenders and humans; once a flag is carried everyone shoots everyone.
+4. **Defenders fire only into their own half**, unless hunting their flag's carrier.
 
 Nearest-enemy search is all-pairs (≈ 22 500 checks per tick at 150 players) in Burst.
 
@@ -195,3 +207,40 @@ bandwidth and frame time recorded in `docs/m1-web-spike.md`.
 - All tests in §6 pass; Levels 1–3 behave as before.
 - README, roadmap (Level 4 row "4a live"), how-the-prototype-works (Match section) and the index page's
   level links updated.
+
+## Implementation notes (as built)
+
+Rulings taken during implementation that change or sharpen the text above:
+
+- **Steering (R11).** Around a box, a bot steers to the box corner minimising
+  distance(position, corner) + distance(corner, target), pushed out 1.5 m, and moves on once within 0.5 m
+  of it or once the onward segment clears. The first wording (nearest corner to the bot) stalled bots in
+  a box's lee.
+- **Flag return and pickup (R8).** A flag returned home this tick cannot be taken until the next tick.
+- **Carrying.** `Combatant` also replicates `bool Carrying`, set from each flag's carrier; movement reads
+  it to disable sprint, so the owner's prediction matches the server.
+- **Ended phase.** While the phase is `Ended`, flags and shots are frozen (no pickups, captures or
+  hits) until the reset.
+- **Bots (R16, R19).** The four rules and the hunter cap in §3.
+- **Spawn strips (R17).** Spawn zones moved off the flag stand (§1): respawning on the stand killed every
+  carrier within 0.9 s.
+- **Respawn (R18).** 5 s for humans and bots alike; moving the spawns alone cut flag takes from 35 to 0
+  at 149 bots in 300 s.
+- **Hit flash (R14).** The owned player's flash latches locally for 0.15 s when its `LastHitTick`
+  changes (the predicted tick runs about a round trip ahead of snapshot arrival); interpolated ghosts
+  compare against the interpolation tick. A dead owned player's server-position outline is hidden, and
+  clicks on the left HUD panel are not Fire.
+- **Replicated-objects check (F2).** At level 4 the expected count includes the 2 flag ghosts and the
+  match-state ghost (153 of 153 with 149 bots); the row label reads "players + flags + match state".
+- **Diagnostics.** `DemoStats.MatchEventTotals[kind]` counts every event since the level started (the
+  16-entry `LastMatchEvents` ring drops flag events under about 60 hits/s).
+
+**Known behaviour at 150 players.** The midfield is a meat-grinder: 10-20 kills/s, and a carrier usually
+dies within a second or two of the pickup because the enemy spawn strip is close. Flags are taken often
+(159 takes in 300 s in the Editor) but captures are rare. Captures are reliably gated only at small
+counts (`MatchFlowTests`: take, drop and return within 120 s at 11 bots and within 60 s at 31). Editor
+diagnostics at 149 bots showed 0 captures; the single browser run showed 3. The 150-player level is a
+networking load test more than a balanced game.
+
+**Browser result.** See [docs/m1-web-spike.md](../../m1-web-spike.md#level-4--match-150-players). Frame time
+6.1 ms (target 16.7 ms met); shots are server-decided with no lag compensation yet.

@@ -380,3 +380,13 @@ Update existing tests: `PlayerMotionTests` and `PlayerSeparationTests` pass `Are
 - [ ] **Step 3:** Write the docs above with the measured numbers; anything not verified is stated as not verified.
 - [ ] **Step 4:** Full suite + Burst grep → green, 0.
 - [ ] **Step 5: Commit** `docs: Level 4a match loop, browser measurements`.
+
+---
+
+## As built
+
+Executed on branch `level4a-match`. Deviations from this plan, with reasons, are recorded as "Implementation
+notes (as built)" in the [spec](../specs/2026-10-27-level4a-match-design.md): box-corner steering (R11), the four
+bot rules (R16) and hunter cap (R19), flank spawn strips (R17), 5 s respawn (R18), the owned hit-flash latch
+(R14) and the Level 4 replicated-object count. Browser measurements are in
+[docs/m1-web-spike.md](../../m1-web-spike.md#level-4--match-150-players).
